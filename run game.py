@@ -31,6 +31,13 @@ class Player(Entity):
     def update(self):
         if self.HitPoints <= 0:
             print("Dead")
+        if held_keys['shift']:
+            if held_keys['w']:
+                playerController.speed = 16
+            if held_keys['s']:
+                playerController.speed = 12
+        else:
+            playerController.speed = 8
 
 class TimeStop(Entity):
     def __init__(self, add_to_scene_entities=True, **kwargs):
@@ -81,12 +88,46 @@ class TimeStop(Entity):
         if self.TsCooldown >= 50:
             self.canRun = True
 
+class EnemyNomral(Entity):
+    def __init__(self, add_to_scene_entities=True, **kwargs):
+        super().__init__(add_to_scene_entities, **kwargs)
+        self.model = 'cube'
+        self.color = color.red
+        self.inRange = False
+        self.inRangeAttack = False
+        self.touchingBorder = False
+    
+    def MovementToPlayer(self):
+        self.position += self.forward * time.dt
+        
+    
+    def update(self):
+        self.dist = distance(playerController.position, self.position)
+        if 1.5 < self.dist < 18:
+            self.inRange = True
+            self.inRangeAttack = False
+        elif self.dist < 1.5:
+            self.inRangeAttack = True
+            self.inRange = False
+        elif self.dist > 18:
+            self.inRange = False
+            self.inRangeAttack = False
+        if self.inRange:
+            self.look_at_2d(playerController.position, 'y')
+            self.MovementToPlayer()
+        elif self.inRangeAttack:
+            print("In range to attack")
+        else:
+            if not self.touchingBorder:
+                self.position += self.forward * time.dt
+
 window.title = "Generic magic game"
 app=Ursina(borderless=False,vsync=60)
 with open("pyfiles/Scripts/Functions.py", "r") as f:
     exec(f.read())
 
-ground=Entity(model='plane',scale=100,texture='grass',texture_scale=(32,32),collider='box')
+ground=Entity(model='plane',scale=1000,texture='grass',texture_scale=(32,32),collider='box')
 player=Player()
 playerController=FirstPersonController()
+enemyOne = EnemyNomral(x=20)
 app.run()
