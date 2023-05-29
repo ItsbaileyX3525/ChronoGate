@@ -26,7 +26,6 @@ class Player(Entity):
     def input(self, key):
         if key=='e':
             self.UseMagic()
-            print("Used magic")
     
     def update(self):
         if self.HitPoints <= 0:
@@ -61,15 +60,19 @@ class TimeStop(Entity):
                     pass
                 self.TsTimerActive = True
                 self.canRun = False
+                self.pauseTime()
                 print(f"Remaining mana: {player.ManaPoints}")
             elif not EnoughMana:
                 print("Not enough mana")
                 pass
 
     def pauseTime(self):
-        pass
+        global enemyTimestopped
+        enemyTimestopped = True
     
     def resumeTime(self):
+        global enemyTimestopped
+        enemyTimestopped = False
         self.TimeresumeAudio.play()
     
     def update(self):
@@ -96,7 +99,7 @@ class EnemyNomral(Entity):
         self.inRange = False
         self.inRangeAttack = False
         self.touchingBorder = False
-        self.y=1
+        self.y = 1
     
     def MovementToPlayer(self):
         self.position += self.forward * time.dt
@@ -113,23 +116,162 @@ class EnemyNomral(Entity):
         elif self.dist > 18:
             self.inRange = False
             self.inRangeAttack = False
-        if self.inRange:
+        if self.inRange and not enemyTimestopped:
             self.look_at_2d(playerController.position, 'y')
             self.MovementToPlayer()
         elif self.inRangeAttack:
-            self.look_at_2d(playerController.position, 'y')
-            print("In range to attack")
+            if not enemyTimestopped:
+                self.look_at_2d(playerController.position, 'y')
+                print("In range to attack")
         else:
-            if not self.touchingBorder:
+            if not self.touchingBorder and not enemyTimestopped:
                 self.position += self.forward * time.dt
+
+class MenuScreen(Entity):
+    def __init__(self, add_to_scene_entities=True, **kwargs):
+        super().__init__(add_to_scene_entities, **kwargs)
+        self.startAudio = Audio('assets/audio/menu/',autoplay=False,loop=False)
+        self.clickAudio = Audio('assets/audio/menu/click.ogg',autoplay=False,loop=False)
+        
+        self.TimerActive=False
+        self.timer=0
+        
+        self.btnX= 0.2
+        self.btnY = 0.075
+
+        self.btnColor= rgb(0,0,0,30)
+        self.btnHcolor= rgb(0,0,0,50)
+        self.optMenuP= Entity(position=(2,0),parent=camera.ui)
+        self.shopMenuP= Entity(position=(2,0),parent=camera.ui)
+
+        self.UI = Entity(parent=camera.ui)
+
+
+        self.newGameBTN = Button(parent=self.UI,scale=(self.btnX,self.btnY),text='New Game',color=self.btnColor,highlight_color=self.btnHcolor,highlight_scale=1.2,pressed_scale=1.07,pressed_color=self.btnHcolor)
+        self.newGameBTN.on_click=self.Startgame
+
+        self.btnPosY1= self.newGameBTN.y
+        self.optionsGameBTN = Button(parent=self.UI,scale=(self.btnX,self.btnY),text='Options',color=self.btnColor,highlight_color=self.btnHcolor,highlight_scale=1.2,pressed_scale=1.07,pressed_color=self.btnHcolor,
+                    y=0 )
+        self.optionsGameBTN.add_script(SmoothFollow(target=self.newGameBTN,speed=6,offset=[0,-1.55,0.75]))
+        self.optionsGameBTN.on_click=self.opt
+
+
+        self.btnPosY2= self.optionsGameBTN.y
+        self.shopGameBTN = Button(parent=self.UI,scale=(self.btnX,self.btnY),text='Credits',color=self.btnColor,highlight_color=self.btnHcolor,highlight_scale=1.2,pressed_scale=1.07,pressed_color=self.btnHcolor,
+                    y= 0 )
+        self.shopGameBTN.add_script(SmoothFollow(target=self.optionsGameBTN,speed=6,offset=[0,-1.55,0.75]))
+        self.shopGameBTN.on_click=self.shop
+
+
+        self.btnPosY3= self.shopGameBTN.y
+        self.quitGameBTN = Button(parent=self.UI,scale=(self.btnX,self.btnY),text='Quit',color=self.btnColor,highlight_color=rgb(255,0,0,20),highlight_scale=1.2,pressed_scale=1.07,pressed_color=self.btnHcolor,
+                    y=0 )
+        self.quitGameBTN.add_script(SmoothFollow(target=self.shopGameBTN,speed=6,offset=[0,-1.55,0.75]))
+        self.quitGameBTN.on_click=self.quit_
+
+
+        #After button clicked stuff
+        self.optMenu= Button(scale=1,z=3,text='Options',color=self.btnColor,highlight_color=self.btnColor)
+        self.optMenu.add_script(SmoothFollow(target=self.optMenuP,speed=6))
+
+        self.shopMenu= Button(scale=1,color=color.clear,z=3,text='Coding: Bailey\n\nGame design: Bailey\n\nEverything else: Bailey\n\nMenu: @Code3D_ (yt)')
+        self.shopMenu.add_script(SmoothFollow(target=self.shopMenuP,speed=6))
+
+    def Startgame(self):
+        pass
+
+    def opt(self):
+        if not self.clickAudio.playing:
+            self.clickAudio.play()
+        if self.newGameBTN.x==0:
+            self.newGameBTN.x=-0.75
+            self.optMenuP.position=(0,0)
+            self.shopMenuP.position=(2,0)
+
+            self.optionsGameBTN.scale= (0.24,0.09)
+            self.optionsGameBTN.color=(0,0,0,60)
+
+            self.shopGameBTN.scale= (0.2,0.075)
+            self.shopGameBTN.color=self.btnColor
+        elif self.newGameBTN.x==-0.75 and self.optionsGameBTN.color==(0,0,0,60):
+            self.newGameBTN.x=0
+            self.optMenuP.position=(2,0)
+            self.shopMenuP.position=(2,0)
+
+            self.optionsGameBTN.scale= (0.2,0.075)
+            self.optionsGameBTN.color=self.btnColor
+
+            self.shopGameBTN.scale= (0.2,0.075)
+            self.shopGameBTN.color=self.btnColor
+        elif self.newGameBTN.x==-0.75 and self.shopGameBTN.color==(0,0,0,60):
+            self.newGameBTN.x=-0.75
+            self.optMenuP.position=(0,0)
+            self.shopMenuP.position=(2,0)
+
+            self.optionsGameBTN.scale= (0.24,0.09)
+            self.optionsGameBTN.color=(0,0,0,60)
+
+            self.shopGameBTN.scale= (0.2,0.075)
+            self.shopGameBTN.color=self.btnColor
+
+    def shop(self):
+        if not self.clickAudio.playing:
+            self.clickAudio.play()
+        if self.newGameBTN.x==0:
+            self.newGameBTN.x=-0.75
+            self.optMenuP.position=(2,0)
+            self.shopMenuP.position=(0,0)
+
+            self.shopGameBTN.scale= (0.24,0.09)
+            self.shopGameBTN.color=(0,0,0,60)
+
+            self.optionsGameBTN.scale= (0.2,0.075)
+            self.optionsGameBTN.color=self.btnColor
+        elif self.newGameBTN.x==-0.75 and self.shopGameBTN.color==(0,0,0,60):
+            self.newGameBTN.x=0
+            self.optMenuP.position=(2,0)
+            self.shopMenuP.position=(2,0)
+
+            self.optionsGameBTN.scale= (0.2,0.075)
+            self.optionsGameBTN.color=self.btnColor
+
+            self.shopGameBTN.scale= (0.2,0.075)
+            self.shopGameBTN.color=self.btnColor
+        elif self.newGameBTN.x==-0.75 and self.optionsGameBTN.color==(0,0,0,60):
+            self.newGameBTN.x=-0.75
+            self.optMenuP.position=(2,0)
+            self.shopMenuP.position=(0,0)
+
+            self.shopGameBTN.scale= (0.24,0.09)
+            self.shopGameBTN.color=(0,0,0,60)
+
+            self.optionsGameBTN.scale= (0.2,0.075)
+            self.optionsGameBTN.color=self.btnColor       
+
+
+    def quit_(self):
+        if not self.clickAudio.playing:
+            self.clickAudio.play()
+        self.TimerActive=True
+        
+    def update(self):
+        if self.TimerActive:
+            self.timer+=time.dt
+        if self.timer>=1:
+            application.quit()
+            
 
 window.title = "Generic magic game"
 app=Ursina(borderless=False,vsync=60)
 with open("pyfiles/Scripts/Functions.py", "r") as f:
     exec(f.read())
 
-GROUND=Entity(model='plane',scale=1000,texture='grass',texture_scale=(32,32),collider='box')
-player=Player()
-playerController=FirstPersonController()
-enemyOne = EnemyNomral(x=20)
+enemyTimestopped = False
+#GROUND=Entity(model='plane',scale=1000,texture='grass',texture_scale=(32,32),collider='box')
+#player=Player()
+#playerController=FirstPersonController()
+#enemyOne = EnemyNomral(x=20)
+menu=MenuScreen()
+#destroy(menu)
 app.run()
