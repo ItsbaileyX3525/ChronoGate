@@ -96,6 +96,7 @@ class EnemyNomral(Entity):
         self.inRange = False
         self.inRangeAttack = False
         self.touchingBorder = False
+        self.y=1
     
     def MovementToPlayer(self):
         self.position += self.forward * time.dt
@@ -116,6 +117,7 @@ class EnemyNomral(Entity):
             self.look_at_2d(playerController.position, 'y')
             self.MovementToPlayer()
         elif self.inRangeAttack:
+            self.look_at_2d(playerController.position, 'y')
             print("In range to attack")
         else:
             if not self.touchingBorder:
@@ -126,7 +128,7 @@ app=Ursina(borderless=False,vsync=60)
 with open("pyfiles/Scripts/Functions.py", "r") as f:
     exec(f.read())
 
-ground=Entity(model='plane',scale=1000,texture='grass',texture_scale=(32,32),collider='box')
+GROUND=Entity(model='plane',scale=1000,texture='grass',texture_scale=(32,32),collider='box')
 player=Player()
 playerController=FirstPersonController()
 enemyOne = EnemyNomral(x=20)

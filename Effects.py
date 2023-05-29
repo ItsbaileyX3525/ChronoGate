@@ -19,7 +19,7 @@ class TSEffect(Entity):
                 self.Bubbles.remove(e)
                 self.to_be_destroyed.append(e)
         for e in self.to_be_destroyed:
-                destroy(e)
+            destroy(e)
 
         self.to_be_destroyed.clear()
 app = Ursina()
