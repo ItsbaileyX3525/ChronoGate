@@ -14,7 +14,7 @@ class TSEffect(Entity):
     
     def update(self):
         for e in self.Bubbles:
-            e.scale += Vec3(0.1, 0.1, 0.1)
+            e.scale += Vec3(0.1, 0.1, 0.1) * 3
             if e.scale_x >= 12:
                 self.Bubbles.remove(e)
                 self.to_be_destroyed.append(e)
