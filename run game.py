@@ -136,6 +136,8 @@ class MenuScreen(Entity):
         
         self.startAudio = Audio('assets/audio/menu/start.ogg',autoplay=False,loop=False)
         self.clickAudio = Audio('assets/audio/menu/click.ogg',autoplay=False,loop=False)
+        self.introAudio = Audio('assets/audio/menu/intro.ogg',autoplay=False,loop=False)
+        self.oldSpiceAudio = Audio('assets/audio/menu/oldspice.mp3',autoplay=False,loop=False,volume=.5)
         
         self.TimerActive=False
         self.timer=0
@@ -151,9 +153,9 @@ class MenuScreen(Entity):
 
         self.UI = Entity(parent=camera.ui)
         
-        self.WormholeTravel = Animation(parent=camera.ui,visible=False,name='assets/Textures/Menu/Menu.gif',scale_y=1,scale_x=2)
+        self.WormholeTravel = Entity(model='quad',parent=camera.ui,visible=False,texture='assets/textures/menu/menu.mp4',scale_y=1,scale_x=2)
         
-        self.titleScreen = Text(font='assets/Textures/Fonts/MainFont.ttf',text='Generic magic game',y=.4,x=-.25)
+        self.titleScreen = Text(font='assets/textures/fonts/MainFont.ttf',text='ChronoGate',y=.4,x=-.185)
 
         self.newGameBTN = Button(radius=.3, parent=self.UI,scale=(self.btnX,self.btnY),text='Start Game',color=self.btnColor,highlight_color=self.btnHcolor,highlight_scale=1.2,pressed_scale=1.07,pressed_color=self.btnHcolor)
         self.newGameBTN.on_click=self.Startgame
@@ -187,7 +189,7 @@ class MenuScreen(Entity):
         #Destroy all entites related to the menu
         self.EntitiesA = [self.startAudio,self.clickAudio,self.optMenuP,self.optionsGameBTN,
         self.UI,self.shopMenuP,self.titleScreen,self.newGameBTN,self.shopGameBTN,self.shopMenu,self.shopMenuP,
-        self.quitGameBTN]
+        self.quitGameBTN,self.volume_slider,self.volume_sliderP]
         
         self.Entities.extend(self.EntitiesA)
 
@@ -196,18 +198,19 @@ class MenuScreen(Entity):
         app.sfxManagerList[0].setVolume(volume)
 
     def Startgame(self):
-        global GROUND,player,playerController,enemyOne
         for e in self.Entities:
             destroy(e)
-        
-        GROUND=Entity(model='plane',scale=1000,texture='grass',texture_scale=(32,32),collider='box')
-        #player=Player()
-        #playerController=FirstPersonController()
-        #enemyOne = EnemyNormal(x=20)
         self.startAudio.play()
         self.WormholeTravel.visible = True
-        #destroy(menu)
-        
+        self.s = Sequence(Wait(1),Func(self.introAudio.play))
+        self.s.start()
+
+    def startGame():
+        global GROUND,player,playerController,enemyOne
+        player=Player()
+        playerController=FirstPersonController()
+        enemyOne = EnemyNormal(x=20) 
+        GROUND=Entity(model='plane',scale=1000,texture='grass',texture_scale=(32,32),collider='box')
         
     def opt(self):
         if not self.clickAudio.playing:
@@ -219,6 +222,7 @@ class MenuScreen(Entity):
 
             self.optionsGameBTN.scale= (0.24,0.09)
             self.optionsGameBTN.color=(0,0,0,60)
+            self.titleScreen.text = 'Options'
             self.volume_sliderP.position = (-1, 4)
 
             self.shopGameBTN.scale= (0.2,0.075)
@@ -231,6 +235,7 @@ class MenuScreen(Entity):
             self.optionsGameBTN.scale= (0.2,0.075)
             self.optionsGameBTN.color=self.btnColor
             self.volume_sliderP.position = (24,4)
+            self.titleScreen.text = 'chronogate'
 
             self.shopGameBTN.scale= (0.2,0.075)
             self.shopGameBTN.color=self.btnColor
@@ -242,6 +247,7 @@ class MenuScreen(Entity):
             self.optionsGameBTN.scale= (0.24,0.09)
             self.optionsGameBTN.color=(0,0,0,60)
             self.volume_sliderP.position = (-1, 4)
+            self.titleScreen.text = 'Options'
 
             self.shopGameBTN.scale= (0.2,0.075)
             self.shopGameBTN.color=self.btnColor
@@ -256,6 +262,7 @@ class MenuScreen(Entity):
 
             self.shopGameBTN.scale= (0.24,0.09)
             self.shopGameBTN.color=(0,0,0,60)
+            self.titleScreen.text = 'Credits'
 
             self.optionsGameBTN.scale= (0.2,0.075)
             self.optionsGameBTN.color=self.btnColor
@@ -266,6 +273,7 @@ class MenuScreen(Entity):
 
             self.optionsGameBTN.scale= (0.2,0.075)
             self.optionsGameBTN.color=self.btnColor
+            self.titleScreen.text = 'chronogate'
 
             self.shopGameBTN.scale= (0.2,0.075)
             self.shopGameBTN.color=self.btnColor
@@ -277,6 +285,7 @@ class MenuScreen(Entity):
             self.shopGameBTN.scale= (0.24,0.09)
             self.shopGameBTN.color=(0,0,0,60)
             self.volume_sliderP.position = (24, 4)
+            self.titleScreen.text = 'Credits'
 
             self.optionsGameBTN.scale= (0.2,0.075)
             self.optionsGameBTN.color=self.btnColor       
@@ -295,7 +304,7 @@ class MenuScreen(Entity):
             application.quit()
             
 
-window.title = "Generic magic game"
+window.title = "ChronoGate"
 app=Ursina(borderless=False,vsync=60)
 with open("pyfiles/Scripts/Functions.py", "r") as f:
     exec(f.read())

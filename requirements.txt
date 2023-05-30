@@ -1,0 +1,4 @@
+https://github.com/pokepetter/ursina/archive/master.zip
+Pillow>=9.5.0
+imageio>=2.30.0
+numpy>=1.24.3
