@@ -136,13 +136,13 @@ class MenuScreen(Entity):
         self.startAudio = Audio('assets/audio/menu/start.ogg',autoplay=False,loop=False)
         self.clickAudio = Audio('assets/audio/menu/click.ogg',autoplay=False,loop=False)
         self.introAudio = Audio('assets/audio/menu/intro.ogg',autoplay=False,loop=False)
-        self.oldSpiceAudio = Audio('assets/audio/menu/oldspice.mp3',autoplay=False,loop=False,volume=.5)
         
         self.TimerActive = False
         self.timer = 0
         self.canSkip = False
         self.skipTimer = 0
         self.canSkipText = Text(z=-2,visible=False,text="Hold 'e' to skip.",x=-.88,y=-.46)
+        self.mouseSens = 4
         
         self.btnX = 0.2
         self.btnY = 0.075
@@ -152,8 +152,8 @@ class MenuScreen(Entity):
         self.optMenuP = Entity(position=(2,0),parent=camera.ui)
         self.shopMenuP = Entity(position=(2,0),parent=camera.ui)
         self.volume_sliderP = Entity(position=(24,4),paret=camera.ui)
-        self.sensDecreaseP = Entity(position=(0,0),parent=camera.ui)
-        self.sensIncreaseP = Entity(position=(2,2),parent=camera.ui)
+        self.sensDecreaseP = Entity(position=(2,0),parent=camera.ui)
+        self.sensIncreaseP = Entity(position=(2,0),parent=camera.ui)
 
         self.UI = Entity(parent=camera.ui)
         
@@ -185,13 +185,18 @@ class MenuScreen(Entity):
         self.volume_slider = Slider(parent=self.UI,min=0, max=100, default=100, dynamic=True,position=(-24,.3),text='Master volume:',on_value_changed = self.set_volume)
         self.volume_slider.add_script(SmoothFollow(target=self.volume_sliderP,speed=6))
         
-        self.sensDecrease = Button(text='<',radius=.3,parent=self.UI,color=self.btnColor,scale=(.05,.05),highlight_color=self.btnHcolor,highlight_scale=1.2,pressed_scale=1.07,pressed_color=self.btnHcolor,y= 0)
+        self.sensDecrease = Button(text='e',radius=.3,parent=self.UI,color=self.btnColor,scale=(.05,.05),highlight_color=self.btnHcolor,highlight_scale=1.2,pressed_scale=1.07,pressed_color=self.btnHcolor,y= 0)
         self.sensDecrease.add_script(SmoothFollow(target=self.sensDecreaseP,speed=6))
-        
-        self.sensIncrease = Button(text='>',radius=.3,parent=self.UI,color=self.btnColor,scale=(.05,.05),highlight_color=self.btnHcolor,highlight_scale=1.2,pressed_scale=1.07,pressed_color=self.btnHcolor,y= 0)
+        self.sensDecrease.on_click = self.decreaseSens
+        self.sensDecrease.text_entity.use_tags=False;self.sensDecrease.text = '<'
+        self.sensText=Text(font='assets/textures/fonts/Text.ttf',scale=2,y=.025,x=.02,text='₁ ₂ ₃ 4 ₅ ₆ ₇ ₈')
+        self.sensText.add_script(SmoothFollow(target=self.something,speed=6))
+        self.sensIncrease = Button(text='e',radius=.3,parent=self.UI,color=self.btnColor,scale=(.05,.05),highlight_color=self.btnHcolor,highlight_scale=1.2,pressed_scale=1.07,pressed_color=self.btnHcolor,y= 0)
         self.sensIncrease.add_script(SmoothFollow(target=self.sensIncreaseP,speed=6))
+        self.sensIncrease.on_click = self.increaseSens
+        self.sensIncrease.text_entity.use_tags=False;self.sensIncrease.text = '>'
         
-        self.shopMenu = Button(radius=.3,scale=1,color=color.clear,z=3,text='Coding: Bailey\n\nGame design: Bailey\n\nEverything else: Bailey\n\nMenu: @Code3D_ (yt)')
+        self.shopMenu = Button(radius=.3,scale=1,color=color.clear,z=3,text='Coding: Bailey\n\nGame design: Bailey\n\nEverything else: Bailey\n\nSmooth menu animations: @Code3D_ (yt)')
         self.shopMenu.add_script(SmoothFollow(target=self.shopMenuP,speed=6))
 
         #Destroy all entites related to the menu
@@ -201,6 +206,41 @@ class MenuScreen(Entity):
         
         self.Entities.extend(self.EntitiesA)
 
+    def increaseSens(self):
+        if self.mouseSens < 8:
+            self.mouseSens += 1
+            if self.mouseSens == 2:
+                self.sensText.text = '₁ 2 ₃ ₄ ₅ ₆ ₇ ₈'
+            elif self.mouseSens == 3:
+                self.sensText.text = '₁ ₂ 3 ₄ ₅ ₆ ₇ ₈'
+            elif self.mouseSens == 4:
+                self.sensText.text = '₁ ₂ ₃ 4 ₅ ₆ ₇ ₈'
+            elif self.mouseSens == 5:
+                self.sensText.text = '₁ ₂ ₃ ₄ 5 ₆ ₇ ₈'
+            elif self.mouseSens == 6:
+                self.sensText.text = '₁ ₂ ₃ ₄ ₅ 6 ₇ ₈'
+            elif self.mouseSens == 7:
+                self.sensText.text = '₁ ₂ ₃ ₄ ₅ ₆ 7 ₈'
+            elif self.mouseSens == 8:
+                self.sensText.text = '₁ ₂ ₃ ₄ ₅ ₆ ₇ 8'
+                
+    def decreaseSens(self):
+        if self.mouseSens > 1:
+            self.mouseSens -= 1
+            if self.mouseSens == 1:
+                self.sensText.text = '1 ₂ ₃ ₄ ₅ ₆ ₇ ₈'
+            elif self.mouseSens == 2:
+                self.sensText.text = '₁ 2 ₃ ₄ ₅ ₆ ₇ ₈'
+            elif self.mouseSens == 3:
+                self.sensText.text = '₁ ₂ 3 ₄ ₅ ₆ ₇ ₈'
+            elif self.mouseSens == 4:
+                self.sensText.text = '₁ ₂ ₃ 4 ₅ ₆ ₇ ₈'
+            elif self.mouseSens == 5:
+                self.sensText.text = '₁ ₂ ₃ ₄ 5 ₆ ₇ ₈'
+            elif self.mouseSens == 6:
+                self.sensText.text = '₁ ₂ ₃ ₄ ₅ 6 ₇ ₈'
+            elif self.mouseSens == 7:
+                self.sensText.text = '₁ ₂ ₃ ₄ ₅ ₆ 7 ₈'
     def set_volume(self):
         volume = self.volume_slider.value/100
         app.sfxManagerList[0].setVolume(volume)
@@ -253,6 +293,8 @@ class MenuScreen(Entity):
             self.titleScreen.text = 'Options'
             self.titleScreen.x = -.1
             self.volume_sliderP.position = (-1, 4)
+            self.sensDecreaseP.position=(-.1,0)
+            self.sensIncreaseP.position=(.45,0)
 
             self.shopGameBTN.scale = (0.2,0.075)
             self.shopGameBTN.color = self.btnColor
@@ -267,6 +309,8 @@ class MenuScreen(Entity):
             self.volume_sliderP.position = (24,4)
             self.titleScreen.text = 'chronogate'
             self.titleScreen.x = -.185
+            self.sensDecreaseP.position=(2,0)
+            self.sensIncreaseP.position=(2,0)
 
             self.shopGameBTN.scale = (0.2,0.075)
             self.shopGameBTN.color = self.btnColor
@@ -281,6 +325,8 @@ class MenuScreen(Entity):
             self.volume_sliderP.position = (-1, 4)
             self.titleScreen.text = 'Options'
             self.titleScreen.x = -.1
+            self.sensDecreaseP.position=(-.1,0)
+            self.sensIncreaseP.position=(.45,0)
         
             self.shopGameBTN.scale = (0.2,0.075)
             self.shopGameBTN.color = self.btnColor
@@ -325,6 +371,8 @@ class MenuScreen(Entity):
             self.volume_sliderP.position = (24, 4)
             self.titleScreen.text = 'Credits'
             self.titleScreen.x = -.1
+            self.sensDecreaseP.position=(2,0)
+            self.sensIncreaseP.position=(2,0)
 
             self.optionsGameBTN.scale = (0.2,0.075)
             self.optionsGameBTN.color  =self.btnColor       
