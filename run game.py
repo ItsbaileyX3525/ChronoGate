@@ -135,6 +135,7 @@ class MenuScreen(Entity):
         
         self.startAudio = Audio('assets/audio/menu/start.ogg',autoplay=False,loop=False)
         self.clickAudio = Audio('assets/audio/menu/click.ogg',autoplay=False,loop=False)
+        self.click2Audio = Audio('assets/audio/menu/click1.ogg',autoplay=False,loop=False)
         self.introAudio = Audio('assets/audio/menu/intro.ogg',autoplay=False,loop=False)
         
         self.TimerActive = False
@@ -154,6 +155,7 @@ class MenuScreen(Entity):
         self.volume_sliderP = Entity(position=(24,4),paret=camera.ui)
         self.sensDecreaseP = Entity(position=(2,0),parent=camera.ui)
         self.sensIncreaseP = Entity(position=(2,0),parent=camera.ui)
+        self.sensTextP = Entity(position=(2,0),parent=camera.ui)
 
         self.UI = Entity(parent=camera.ui)
         
@@ -189,8 +191,10 @@ class MenuScreen(Entity):
         self.sensDecrease.add_script(SmoothFollow(target=self.sensDecreaseP,speed=6))
         self.sensDecrease.on_click = self.decreaseSens
         self.sensDecrease.text_entity.use_tags=False;self.sensDecrease.text = '<'
-        self.sensText=Text(font='assets/textures/fonts/Text.ttf',scale=2,y=.025,x=.02,text='₁ ₂ ₃ 4 ₅ ₆ ₇ ₈')
-        self.sensText.add_script(SmoothFollow(target=self.something,speed=6))
+        
+        self.sensText=Text(parent=camera.ui,font='assets/textures/fonts/Text.ttf',scale=2,y=.025,x=.02,text='₁ ₂ ₃ 4 ₅ ₆ ₇ ₈')
+        self.sensText.add_script(SmoothFollow(target=self.sensTextP,speed=6))
+        
         self.sensIncrease = Button(text='e',radius=.3,parent=self.UI,color=self.btnColor,scale=(.05,.05),highlight_color=self.btnHcolor,highlight_scale=1.2,pressed_scale=1.07,pressed_color=self.btnHcolor,y= 0)
         self.sensIncrease.add_script(SmoothFollow(target=self.sensIncreaseP,speed=6))
         self.sensIncrease.on_click = self.increaseSens
@@ -207,40 +211,57 @@ class MenuScreen(Entity):
         self.Entities.extend(self.EntitiesA)
 
     def increaseSens(self):
+        global PlayerSensitvity
         if self.mouseSens < 8:
             self.mouseSens += 1
             if self.mouseSens == 2:
                 self.sensText.text = '₁ 2 ₃ ₄ ₅ ₆ ₇ ₈'
+                PlayerSensitvity = (20,20)
             elif self.mouseSens == 3:
                 self.sensText.text = '₁ ₂ 3 ₄ ₅ ₆ ₇ ₈'
+                PlayerSensitvity = (30,30)
             elif self.mouseSens == 4:
                 self.sensText.text = '₁ ₂ ₃ 4 ₅ ₆ ₇ ₈'
+                PlayerSensitvity = (40,40)
             elif self.mouseSens == 5:
                 self.sensText.text = '₁ ₂ ₃ ₄ 5 ₆ ₇ ₈'
+                PlayerSensitvity = (50,50)
             elif self.mouseSens == 6:
                 self.sensText.text = '₁ ₂ ₃ ₄ ₅ 6 ₇ ₈'
+                PlayerSensitvity = (60,60)
             elif self.mouseSens == 7:
                 self.sensText.text = '₁ ₂ ₃ ₄ ₅ ₆ 7 ₈'
+                PlayerSensitvity = (70,70)
             elif self.mouseSens == 8:
                 self.sensText.text = '₁ ₂ ₃ ₄ ₅ ₆ ₇ 8'
-                
+                PlayerSensitvity = (80,80)
+            self.click2Audio.play()
     def decreaseSens(self):
+        global PlayerSensitvity
         if self.mouseSens > 1:
             self.mouseSens -= 1
             if self.mouseSens == 1:
                 self.sensText.text = '1 ₂ ₃ ₄ ₅ ₆ ₇ ₈'
+                PlayerSensitvity = (10,10)
             elif self.mouseSens == 2:
                 self.sensText.text = '₁ 2 ₃ ₄ ₅ ₆ ₇ ₈'
+                PlayerSensitvity = (20,20)
             elif self.mouseSens == 3:
                 self.sensText.text = '₁ ₂ 3 ₄ ₅ ₆ ₇ ₈'
+                PlayerSensitvity = (30,30)
             elif self.mouseSens == 4:
                 self.sensText.text = '₁ ₂ ₃ 4 ₅ ₆ ₇ ₈'
+                PlayerSensitvity = (40,40)
             elif self.mouseSens == 5:
                 self.sensText.text = '₁ ₂ ₃ ₄ 5 ₆ ₇ ₈'
+                PlayerSensitvity = (50,50)
             elif self.mouseSens == 6:
                 self.sensText.text = '₁ ₂ ₃ ₄ ₅ 6 ₇ ₈'
+                PlayerSensitvity = (60,60)
             elif self.mouseSens == 7:
                 self.sensText.text = '₁ ₂ ₃ ₄ ₅ ₆ 7 ₈'
+                PlayerSensitvity = (70,70)
+            self.click2Audio.play()
     def set_volume(self):
         volume = self.volume_slider.value/100
         app.sfxManagerList[0].setVolume(volume)
@@ -276,6 +297,7 @@ class MenuScreen(Entity):
         self.s4.pause()
         player=Player()
         playerController=FirstPersonController()
+        playerController.mouse_sensitivity = PlayerSensitvity
         enemyOne = EnemyNormal(x=20)
         GROUND=Entity(model='plane',scale=1000,texture='grass',texture_scale=(32,32),collider='box')
         
@@ -294,7 +316,7 @@ class MenuScreen(Entity):
             self.titleScreen.x = -.1
             self.volume_sliderP.position = (-1, 4)
             self.sensDecreaseP.position=(-.1,0)
-            self.sensIncreaseP.position=(.45,0)
+            self.sensIncreaseP.position=(.4,0)
 
             self.shopGameBTN.scale = (0.2,0.075)
             self.shopGameBTN.color = self.btnColor
@@ -326,7 +348,7 @@ class MenuScreen(Entity):
             self.titleScreen.text = 'Options'
             self.titleScreen.x = -.1
             self.sensDecreaseP.position=(-.1,0)
-            self.sensIncreaseP.position=(.45,0)
+            self.sensIncreaseP.position=(.4,0)
         
             self.shopGameBTN.scale = (0.2,0.075)
             self.shopGameBTN.color = self.btnColor
@@ -396,9 +418,11 @@ class MenuScreen(Entity):
                     self.canSkip=False
                     self.introAudio.stop()
                     self.FadeToBlack()
-                    
             else:
-                self.skipTimer=0
+                if self.skipTimer > 0:
+                    self.skipTimer-=time.dt
+                elif self.skipTimer < 0:
+                    self.skipTimer = 0
             
 
 window.title = "ChronoGate"
@@ -407,5 +431,6 @@ with open("pyfiles/Scripts/Functions.py", "r") as f:
     exec(f.read())
 
 enemyTimestopped = False
+PlayerSensitvity=(40,40)
 menu=MenuScreen()
 app.run()
