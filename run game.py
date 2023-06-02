@@ -1,5 +1,6 @@
 from ursina import *
 from ursina.prefabs.first_person_controller import *
+import threading
 
 class Player(Entity):
     def __init__(self, **kwargs):
@@ -10,7 +11,7 @@ class Player(Entity):
         self.SpellEquiped = Text(text='Current spell: None',x=-.87,y=-.45)
         self.Spells = ['TimeStop', ]
         self.Timestop = TimeStop()
-    
+
     def UseMana(self, amount):
         if amount>self.ManaPoints:
             print("Not enough mana!")
@@ -19,15 +20,15 @@ class Player(Entity):
             self.ManaPoints -= amount
             print("Used mana")
             return True
-    
+
     def UseMagic(self):
         if self.CurrentEquiped == 'TimeStop' and 'TimeStop' in self.Spells:
             self.Timestop.Activate()
-        
+
     def input(self, key):
         if key=='e':
             self.UseMagic()
-    
+
     def update(self):
         if self.HitPoints <= 0:
             print("Dead")
@@ -46,12 +47,15 @@ class TimeStop(Entity):
         self.TimestopAudio=Audio('assets/audio/spells/TimeStop/timestop.ogg',autoplay=False,loop=False,volume=1)
         self.ClockTickingAudio=Audio('assets/audio/spells/TimeStop/ClockTicking.ogg',autoplay=False,loop=False,volume=1)
         self.TimeresumeAudio=Audio('assets/audio/spells/TimeStop/timeresume.ogg',autoplay=False,loop=False,volume=1)
-        self.TsTimer = 0
-        self.TsTimerActive = False
         self.canRun = True
-        self.TsCooldown = 0
-        self.TsCooldownTimer = False
-    
+        self.resume=Sequence(Wait(7),Func(self.resumeTime))
+        self.ticking=Sequence(Wait(2),Func(self.ClockTickingAudio.play))
+        self.canRunAgain=Sequence(Wait(50),Func(setattr, self.canRun, True))
+        self.loadanims=threading.Thread(target=self.loadAnims).start()
+
+    def loadAnims(self):
+        self.e=Animation(parent=camera.ui,name='assets/textures/spells/time/ts.gif',scale=(2,1),visible=False)
+
     def Activate(self):
         if self.canRun:
             EnoughMana=player.UseMana(amount=10)
@@ -60,8 +64,6 @@ class TimeStop(Entity):
                     self.TimestopAudio.play()
                 else:
                     pass
-                self.TsTimerActive = True
-                self.canRun = False
                 self.pauseTime()
                 print(f"Remaining mana: {player.ManaPoints}")
             elif not EnoughMana:
@@ -71,27 +73,15 @@ class TimeStop(Entity):
     def pauseTime(self):
         global enemyTimestopped
         enemyTimestopped = True
-    
+        self.canRun = False
+        self.resume.start()
+        self.ticking.start()
+
     def resumeTime(self):
         global enemyTimestopped
         enemyTimestopped = False
         self.TimeresumeAudio.play()
-    
-    def update(self):
-        if self.TsTimerActive:
-            self.TsTimer += time.dt
-        if self.TsTimer >= 2:
-            if not self.ClockTickingAudio.playing:
-                self.ClockTickingAudio.play()
-        if self.TsTimer >= 7:
-            self.TsTimerActive = False
-            self.TsTimer = 0
-            self.resumeTime()
-        
-        if self.TsCooldownTimer:
-            self.TsCooldown += time.dt
-        if self.TsCooldown >= 50:
-            self.canRun = True
+        self.canRunAgain.start()
 
 class EnemyNormal(Entity):
     def __init__(self, add_to_scene_entities=True, **kwargs):
@@ -102,10 +92,10 @@ class EnemyNormal(Entity):
         self.inRangeAttack = False
         self.touchingBorder = False
         self.y = 1
-    
+
     def MovementToPlayer(self):
         self.position += self.forward * time.dt
-        
+
     def update(self):
         self.dist = distance(playerController.position, self.position)
         if 1.5 < self.dist < 18:
@@ -132,19 +122,22 @@ class MenuScreen(Entity):
     def __init__(self, add_to_scene_entities=True, **kwargs):
         super().__init__(add_to_scene_entities, **kwargs)
         self.Entities = []
-        
+        self.model='quad'
+        self.texture='assets/textures/menu/background.jpg'
+        self.scale=[16,9]
+
         self.startAudio = Audio('assets/audio/menu/start.ogg',autoplay=False,loop=False)
         self.clickAudio = Audio('assets/audio/menu/click.ogg',autoplay=False,loop=False)
         self.click2Audio = Audio('assets/audio/menu/click1.ogg',autoplay=False,loop=False)
         self.introAudio = Audio('assets/audio/menu/intro.ogg',autoplay=False,loop=False)
-        
+
         self.TimerActive = False
         self.timer = 0
         self.canSkip = False
         self.skipTimer = 0
         self.canSkipText = Text(z=-2,visible=False,text="Hold 'e' to skip.",x=-.88,y=-.46)
         self.mouseSens = 4
-        
+
         self.btnX = 0.2
         self.btnY = 0.075
 
@@ -156,12 +149,13 @@ class MenuScreen(Entity):
         self.sensDecreaseP = Entity(position=(2,0),parent=camera.ui)
         self.sensIncreaseP = Entity(position=(2,0),parent=camera.ui)
         self.sensTextP = Entity(position=(2,0),parent=camera.ui)
+        self.sensTitleP = Entity(position=(2.05,.1),parent=camera.ui)
 
         self.UI = Entity(parent=camera.ui)
-        
+
         self.WormholeTravel = Entity(model='quad',parent=camera.ui,visible=False,texture='assets/textures/menu/menu.mp4',scale_y=1,scale_x=2)
         self.blackScreen = Entity(model='quad',color=color.black, scale=213,alpha=0)
-        
+
         self.titleScreen = Text(font='assets/textures/fonts/MainFont.ttf',text='ChronoGate',y=.4,x=-.185)
 
         self.newGameBTN = Button(radius=.3, parent=self.UI,scale=(self.btnX,self.btnY),text='Start Game',color=self.btnColor,highlight_color=self.btnHcolor,highlight_scale=1.2,pressed_scale=1.07,pressed_color=self.btnHcolor)
@@ -184,30 +178,33 @@ class MenuScreen(Entity):
         self.quitGameBTN.on_click=self.quit_
 
         #After button clicked stuff
-        self.volume_slider = Slider(parent=self.UI,min=0, max=100, default=100, dynamic=True,position=(-24,.3),text='Master volume:',on_value_changed = self.set_volume)
+        self.volume_slider = Slider(step=1,parent=self.UI,min=0, max=100, default=100, dynamic=True,position=(-24,.3),text='Master volume:',on_value_changed = self.set_volume)
         self.volume_slider.add_script(SmoothFollow(target=self.volume_sliderP,speed=6))
-        
+
         self.sensDecrease = Button(text='e',radius=.3,parent=self.UI,color=self.btnColor,scale=(.05,.05),highlight_color=self.btnHcolor,highlight_scale=1.2,pressed_scale=1.07,pressed_color=self.btnHcolor,y= 0)
         self.sensDecrease.add_script(SmoothFollow(target=self.sensDecreaseP,speed=6))
         self.sensDecrease.on_click = self.decreaseSens
         self.sensDecrease.text_entity.use_tags=False;self.sensDecrease.text = '<'
-        
-        self.sensText=Text(parent=camera.ui,font='assets/textures/fonts/Text.ttf',scale=2,y=.025,x=.02,text='₁ ₂ ₃ 4 ₅ ₆ ₇ ₈')
+
+        self.sensText=Text(ignore=False,parent=camera.ui,font='assets/textures/fonts/Text.ttf',scale=2,y=.025,x=.02,text='₁ ₂ ₃ 4 ₅ ₆ ₇ ₈')
         self.sensText.add_script(SmoothFollow(target=self.sensTextP,speed=6))
-        
+        self.sensTitle=Text(ignore=False,parent=camera.ui,scale=1.5,y=.025,x=.02,text='Sensitivity')
+        self.sensTitle.add_script(SmoothFollow(target=self.sensTitleP,speed=6))
+
         self.sensIncrease = Button(text='e',radius=.3,parent=self.UI,color=self.btnColor,scale=(.05,.05),highlight_color=self.btnHcolor,highlight_scale=1.2,pressed_scale=1.07,pressed_color=self.btnHcolor,y= 0)
         self.sensIncrease.add_script(SmoothFollow(target=self.sensIncreaseP,speed=6))
         self.sensIncrease.on_click = self.increaseSens
         self.sensIncrease.text_entity.use_tags=False;self.sensIncrease.text = '>'
-        
-        self.shopMenu = Button(radius=.3,scale=1,color=color.clear,z=3,text='Coding: Bailey\n\nGame design: Bailey\n\nEverything else: Bailey\n\nSmooth menu animations: @Code3D_ (yt)')
+
+        self.shopMenu = Button(radius=.3,scale=1,color=color.clear,z=3,text='<scale:2>Main credits\n\n\n<scale:1>Coding: Bailey\n\nGame design: Bailey\n\nEverything else: Bailey\n\nSmooth menu animations: @Code3D_ (yt)\n\n\n\n<scale:2>Special thanks<scale:1>\n\n\n- RangerRhino23\n\n\n\n\n<scale:.8>Why RangerRhino23? - Because I can and I did.')
         self.shopMenu.add_script(SmoothFollow(target=self.shopMenuP,speed=6))
 
         #Destroy all entites related to the menu
         self.EntitiesA = [self.startAudio,self.clickAudio,self.optMenuP,self.optionsGameBTN,
         self.UI,self.shopMenuP,self.titleScreen,self.newGameBTN,self.shopGameBTN,self.shopMenu,self.shopMenuP,
-        self.quitGameBTN,self.volume_slider,self.volume_sliderP]
-        
+        self.quitGameBTN,self.volume_slider,self.volume_sliderP,self.sensDecrease,self.sensDecreaseP,self.sensIncrease,
+        self.sensIncreaseP,self.sensText,self.sensTextP,self.sensTitle,self.sensTitleP]
+
         self.Entities.extend(self.EntitiesA)
 
     def increaseSens(self):
@@ -236,6 +233,7 @@ class MenuScreen(Entity):
                 self.sensText.text = '₁ ₂ ₃ ₄ ₅ ₆ ₇ 8'
                 PlayerSensitvity = (80,80)
             self.click2Audio.play()
+
     def decreaseSens(self):
         global PlayerSensitvity
         if self.mouseSens > 1:
@@ -262,6 +260,7 @@ class MenuScreen(Entity):
                 self.sensText.text = '₁ ₂ ₃ ₄ ₅ ₆ 7 ₈'
                 PlayerSensitvity = (70,70)
             self.click2Audio.play()
+            
     def set_volume(self):
         volume = self.volume_slider.value/100
         app.sfxManagerList[0].setVolume(volume)
@@ -278,6 +277,7 @@ class MenuScreen(Entity):
         self.s1.start()
         self.s4.start()
 
+
     def ShowSkipButton(self):
         self.canSkip=True
         self.canSkipText.visible=True
@@ -285,6 +285,8 @@ class MenuScreen(Entity):
         self.s3.start()
 
     def FadeToBlack(self):
+        self.texture = None
+        self.color=color.clear
         self.WormholeTravel.fade_out(duration=1.3)
         self.blackScreen.fade_in(duration=1.3)
         destroy(self.canSkipText)
@@ -294,13 +296,14 @@ class MenuScreen(Entity):
         global GROUND,player,playerController,enemyOne
         self.blackScreen.fade_out(duration=.8)
         destroy(self.WormholeTravel)
+        destroy(self)
         self.s4.pause()
         player=Player()
         playerController=FirstPersonController()
         playerController.mouse_sensitivity = PlayerSensitvity
         enemyOne = EnemyNormal(x=20)
         GROUND=Entity(model='plane',scale=1000,texture='grass',texture_scale=(32,32),collider='box')
-        
+
     def opt(self):
         if not self.clickAudio.playing:
             self.clickAudio.play()
@@ -317,6 +320,8 @@ class MenuScreen(Entity):
             self.volume_sliderP.position = (-1, 4)
             self.sensDecreaseP.position=(-.1,0)
             self.sensIncreaseP.position=(.4,0)
+            self.sensTextP.position=(0.02,.02)
+            self.sensTitleP.position=(0.05,.1)
 
             self.shopGameBTN.scale = (0.2,0.075)
             self.shopGameBTN.color = self.btnColor
@@ -333,6 +338,8 @@ class MenuScreen(Entity):
             self.titleScreen.x = -.185
             self.sensDecreaseP.position=(2,0)
             self.sensIncreaseP.position=(2,0)
+            self.sensTextP.position=(2,0)
+            self.sensTitleP.position=(2.05,.1)
 
             self.shopGameBTN.scale = (0.2,0.075)
             self.shopGameBTN.color = self.btnColor
@@ -349,7 +356,9 @@ class MenuScreen(Entity):
             self.titleScreen.x = -.1
             self.sensDecreaseP.position=(-.1,0)
             self.sensIncreaseP.position=(.4,0)
-        
+            self.sensTextP.position=(0.02,.02)
+            self.sensTitleP.position=(0.05,.1)
+
             self.shopGameBTN.scale = (0.2,0.075)
             self.shopGameBTN.color = self.btnColor
 
@@ -395,17 +404,17 @@ class MenuScreen(Entity):
             self.titleScreen.x = -.1
             self.sensDecreaseP.position=(2,0)
             self.sensIncreaseP.position=(2,0)
+            self.sensTextP.position=(2,0)
+            self.sensTitleP.position=(2.05,.1)
 
             self.optionsGameBTN.scale = (0.2,0.075)
             self.optionsGameBTN.color  =self.btnColor       
-
 
     def quit_(self):
         if not self.clickAudio.playing:
             self.clickAudio.play()
         self.TimerActive = True
 
-        
     def update(self):
         if self.TimerActive:
             self.timer+=time.dt
@@ -423,12 +432,14 @@ class MenuScreen(Entity):
                     self.skipTimer-=time.dt
                 elif self.skipTimer < 0:
                     self.skipTimer = 0
-            
+
 
 window.title = "ChronoGate"
-app=Ursina(borderless=False,vsync=60)
+app=Ursina(borderless=False,vsync=60,development_mode=True)
 with open("pyfiles/Scripts/Functions.py", "r") as f:
     exec(f.read())
+
+Sky(texture='assets/textures/misc/sky.jpg')
 
 enemyTimestopped = False
 PlayerSensitvity=(40,40)
