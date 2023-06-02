@@ -48,9 +48,9 @@ class TimeStop(Entity):
         self.ClockTickingAudio=Audio('assets/audio/spells/TimeStop/ClockTicking.ogg',autoplay=False,loop=False,volume=1)
         self.TimeresumeAudio=Audio('assets/audio/spells/TimeStop/timeresume.ogg',autoplay=False,loop=False,volume=1)
         self.canRun = True
-        self.resume=Sequence(Wait(7),Func(self.resumeTime))
-        self.ticking=Sequence(Wait(2),Func(self.ClockTickingAudio.play))
-        self.canRunAgain=Sequence(Wait(50),Func(setattr, self.canRun, True))
+        self.resume=Sequence(Wait(7),Func(self.resumeTime),auto_destroy=False)
+        self.ticking=Sequence(Wait(2),Func(self.ClockTickingAudio.play),auto_destroy=False)
+        self.canRunAgain=Sequence(Wait(1),Func(setattr, self, 'canRun', True),auto_destroy=False)
         self.loadanims=threading.Thread(target=self.loadAnims).start()
 
     def loadAnims(self):
@@ -67,7 +67,6 @@ class TimeStop(Entity):
                 self.pauseTime()
                 print(f"Remaining mana: {player.ManaPoints}")
             elif not EnoughMana:
-                print("Not enough mana")
                 pass
 
     def pauseTime(self):
@@ -113,10 +112,10 @@ class EnemyNormal(Entity):
         elif self.inRangeAttack:
             if not enemyTimestopped:
                 self.look_at_2d(playerController.position, 'y')
-                print("In range to attack")
+                pass
         else:
             if not self.touchingBorder and not enemyTimestopped:
-                self.position += self.forward * time.dt
+                self.position += self.forward * time.dt * 2
 
 class MenuScreen(Entity):
     def __init__(self, add_to_scene_entities=True, **kwargs):
@@ -435,7 +434,7 @@ class MenuScreen(Entity):
 
 
 window.title = "ChronoGate"
-app=Ursina(borderless=False,vsync=60,development_mode=True)
+app=Ursina(borderless=False,vsync=60,development_mode=True,use_ingame_console=True)
 with open("pyfiles/Scripts/Functions.py", "r") as f:
     exec(f.read())
 
