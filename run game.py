@@ -5,12 +5,24 @@ import threading
 class Player(Entity):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
+        #General player stuff
         self.HitPoints = 100
-        self.CurrentEquiped = 'TimeStop'
         self.ManaPoints = 20
+        
+        #Head bobbing crap
+        self.bobbing_amount = 0.1
+        self.bobbing_speed = 0.1
+        self.bobbing_timer = 0.0
+        
+        #Spells & stuff
+        self.CurrentEquiped = 'TimeStop'
         self.SpellEquiped = Text(text='Current spell: None',x=-.87,y=-.45)
         self.Spells = ['TimeStop', ]
         self.Timestop = TimeStop()
+        
+        #Audios for the player
+        self.normalFootSteps=Audio('assets/audio/player/footslow.ogg',autoplay=False,loop=False,volume=.5)
+        self.sprintFootSteps=Audio('assets/audio/player/footfast.ogg',autoplay=False,loop=False,volume=.5)
 
     def UseMana(self, amount):
         if amount>self.ManaPoints:
@@ -32,13 +44,35 @@ class Player(Entity):
     def update(self):
         if self.HitPoints <= 0:
             print("Dead")
-        if held_keys['shift']:
-            if held_keys['w']:
-                playerController.speed = 16
-            if held_keys['s']:
-                playerController.speed = 12
+        if held_keys['w'] or held_keys['a'] or held_keys['s'] or held_keys['d']:
+            self.bobbing_timer += self.bobbing_speed
+            vertical_offset = abs(math.sin(self.bobbing_timer)) * self.bobbing_amount
+            camera.y = vertical_offset
+            if not self.normalFootSteps.playing:
+                self.normalFootSteps.play()
+            if held_keys['shift']:
+                if held_keys['w']:
+                    if self.normalFootSteps.playing:
+                        self.normalFootSteps.stop()
+                    if not self.sprintFootSteps.playing:
+                        self.sprintFootSteps.play()
+                    playerController.speed=16
+                    self.bobbing_speed=.2
+                elif held_keys['s']:
+                    if self.normalFootSteps.playing:
+                        self.normalFootSteps.stop()
+                    if not self.sprintFootSteps.playing:
+                        self.sprintFootSteps.play()
+                    playerController.speed=12
+                    self.bobbing_speed=.15
+            else:
+                self.sprintFootSteps.stop()
+                playerController.speed = 8
+                self.bobbing_speed=.1
         else:
-            playerController.speed = 8
+            self.normalFootSteps.stop()
+            self.bobbing_timer = 0.0
+            camera.y = 0.0
         self.SpellEquiped.text = f'Current spell: {self.CurrentEquiped}'
 
 class TimeStop(Entity):
@@ -50,7 +84,7 @@ class TimeStop(Entity):
         self.canRun = True
         self.resume=Sequence(Wait(7),Func(self.resumeTime),auto_destroy=False)
         self.ticking=Sequence(Wait(2),Func(self.ClockTickingAudio.play),auto_destroy=False)
-        self.canRunAgain=Sequence(Wait(1),Func(setattr, self, 'canRun', True),auto_destroy=False)
+        self.canRunAgain=Sequence(Wait(50),Func(setattr, self, 'canRun', True),auto_destroy=False)
         self.loadanims=threading.Thread(target=self.loadAnims).start()
 
     def loadAnims(self):
@@ -149,11 +183,16 @@ class MenuScreen(Entity):
         self.sensIncreaseP = Entity(position=(2,0),parent=camera.ui)
         self.sensTextP = Entity(position=(2,0),parent=camera.ui)
         self.sensTitleP = Entity(position=(2.05,.1),parent=camera.ui)
+        self.controlsP = Entity(position=(2,-0.2),parent=camera.ui)
 
         self.UI = Entity(parent=camera.ui)
 
         self.WormholeTravel = Entity(model='quad',parent=camera.ui,visible=False,texture='assets/textures/menu/menu.mp4',scale_y=1,scale_x=2)
         self.blackScreen = Entity(model='quad',color=color.black, scale=213,alpha=0)
+
+        self.keyboard = Entity(model='quad',parent=camera.ui,visible=False,texture='assets/textures/menu/keyboard.png',z=-10,scale=[1.78,1])
+        self.exitKeyboard = Button(visible=False,x=.85,y=.45,radius=.3,z=-11,parent=self.UI,scale=(.05,.05),text='X',text_color=color.black,color=color.red,highlight_color=color.red,highlight_scale=1.2,pressed_scale=1.07,pressed_color=color.red)
+        self.exitKeyboard.on_click = self.Keyboard
 
         self.titleScreen = Text(font='assets/textures/fonts/MainFont.ttf',text='ChronoGate',y=.4,x=-.185)
 
@@ -162,18 +201,18 @@ class MenuScreen(Entity):
 
         self.btnPosY1 = self.newGameBTN.y
         self.optionsGameBTN = Button(radius=.3,parent=self.UI,scale=(self.btnX,self.btnY),text='Options',color=self.btnColor,highlight_color=self.btnHcolor,highlight_scale=1.2,pressed_scale=1.07,pressed_color=self.btnHcolor,y=0 )
-        self.optionsGameBTN.add_script(SmoothFollow(target=self.newGameBTN,speed=6,offset=[0,-1.55,0.75]))
+        self.optionsGameBTN.add_script(SmoothFollow(target=self.newGameBTN,speed=6,offset=[0,-1.75,0.75]))
         self.optionsGameBTN.on_click=self.opt
 
         self.btnPosY2 = self.optionsGameBTN.y
         self.shopGameBTN = Button(radius=.3,parent=self.UI,scale=(self.btnX,self.btnY),text='Credits',color=self.btnColor,highlight_color=self.btnHcolor,highlight_scale=1.2,pressed_scale=1.07,pressed_color=self.btnHcolor,y= 0 )
-        self.shopGameBTN.add_script(SmoothFollow(target=self.optionsGameBTN,speed=6,offset=[0,-1.55,0.75]))
+        self.shopGameBTN.add_script(SmoothFollow(target=self.optionsGameBTN,speed=6,offset=[0,-1.75,0.75]))
         self.shopGameBTN.on_click=self.shop
 
 
         self.btnPosY3 = self.shopGameBTN.y
         self.quitGameBTN = Button(radius=.3,parent=self.UI,scale=(self.btnX,self.btnY),text='Quit',color=self.btnColor,highlight_color=rgb(255,0,0,20),highlight_scale=1.2,pressed_scale=1.07,pressed_color=self.btnHcolor,y=0 )
-        self.quitGameBTN.add_script(SmoothFollow(target=self.shopGameBTN,speed=6,offset=[0,-1.55,0.75]))
+        self.quitGameBTN.add_script(SmoothFollow(target=self.shopGameBTN,speed=6,offset=[0,-1.75,0.75]))
         self.quitGameBTN.on_click=self.quit_
 
         #After button clicked stuff
@@ -195,6 +234,10 @@ class MenuScreen(Entity):
         self.sensIncrease.on_click = self.increaseSens
         self.sensIncrease.text_entity.use_tags=False;self.sensIncrease.text = '>'
 
+        self.controls=Button(text='Show controls',radius=.3,parent=self.UI,color=self.btnColor,scale=(.3,.05),highlight_color=self.btnHcolor,highlight_scale=1.2,pressed_scale=1.07,pressed_color=self.btnHcolor,y= 0)
+        self.controls.on_click=self.Keyboard
+        self.controls.add_script(SmoothFollow(target=self.controlsP,speed=6))
+
         self.shopMenu = Button(radius=.3,scale=1,color=color.clear,z=3,text='<scale:2>Main credits\n\n\n<scale:1>Coding: Bailey\n\nGame design: Bailey\n\nEverything else: Bailey\n\nSmooth menu animations: @Code3D_ (yt)\n\n\n\n<scale:2>Special thanks<scale:1>\n\n\n- RangerRhino23\n\n\n\n\n<scale:.8>Why RangerRhino23? - Because I can and I did.')
         self.shopMenu.add_script(SmoothFollow(target=self.shopMenuP,speed=6))
 
@@ -202,7 +245,8 @@ class MenuScreen(Entity):
         self.EntitiesA = [self.startAudio,self.clickAudio,self.optMenuP,self.optionsGameBTN,
         self.UI,self.shopMenuP,self.titleScreen,self.newGameBTN,self.shopGameBTN,self.shopMenu,self.shopMenuP,
         self.quitGameBTN,self.volume_slider,self.volume_sliderP,self.sensDecrease,self.sensDecreaseP,self.sensIncrease,
-        self.sensIncreaseP,self.sensText,self.sensTextP,self.sensTitle,self.sensTitleP]
+        self.sensIncreaseP,self.sensText,self.sensTextP,self.sensTitle,self.sensTitleP,self.keyboard,self.exitKeyboard,
+        self.controlsP,self.controls]
 
         self.Entities.extend(self.EntitiesA)
 
@@ -260,6 +304,10 @@ class MenuScreen(Entity):
                 PlayerSensitvity = (70,70)
             self.click2Audio.play()
             
+    def Keyboard(self):
+        self.keyboard.visible=not self.keyboard.visible
+        self.exitKeyboard.visible =not self.exitKeyboard.visible
+           
     def set_volume(self):
         volume = self.volume_slider.value/100
         app.sfxManagerList[0].setVolume(volume)
@@ -317,10 +365,11 @@ class MenuScreen(Entity):
             self.titleScreen.text = 'Options'
             self.titleScreen.x = -.1
             self.volume_sliderP.position = (-1, 4)
-            self.sensDecreaseP.position=(-.1,0)
-            self.sensIncreaseP.position=(.4,0)
-            self.sensTextP.position=(0.02,.02)
-            self.sensTitleP.position=(0.05,.1)
+            self.sensDecreaseP.position = (-.1,0)
+            self.sensIncreaseP.position = (.4,0)
+            self.sensTextP.position = (0.02,.02)
+            self.sensTitleP.position = (0.05,.1)
+            self.controlsP.position = (.125,-0.2)
 
             self.shopGameBTN.scale = (0.2,0.075)
             self.shopGameBTN.color = self.btnColor
@@ -335,10 +384,11 @@ class MenuScreen(Entity):
             self.volume_sliderP.position = (24,4)
             self.titleScreen.text = 'chronogate'
             self.titleScreen.x = -.185
-            self.sensDecreaseP.position=(2,0)
-            self.sensIncreaseP.position=(2,0)
-            self.sensTextP.position=(2,0)
-            self.sensTitleP.position=(2.05,.1)
+            self.sensDecreaseP.position = (2,0)
+            self.sensIncreaseP.position = (2,0)
+            self.sensTextP.position = (2,0)
+            self.sensTitleP.position = (2.05,.1)
+            self.controlsP.position=(2,-0.2)
 
             self.shopGameBTN.scale = (0.2,0.075)
             self.shopGameBTN.color = self.btnColor
@@ -353,11 +403,12 @@ class MenuScreen(Entity):
             self.volume_sliderP.position = (-1, 4)
             self.titleScreen.text = 'Options'
             self.titleScreen.x = -.1
-            self.sensDecreaseP.position=(-.1,0)
-            self.sensIncreaseP.position=(.4,0)
-            self.sensTextP.position=(0.02,.02)
-            self.sensTitleP.position=(0.05,.1)
-
+            self.sensDecreaseP.position = (-.1,0)
+            self.sensIncreaseP.position = (.4,0)
+            self.sensTextP.position = (0.02,.02)
+            self.sensTitleP.position = (0.05,.1)
+            self.controlsP.position = (.125,-0.2)
+            
             self.shopGameBTN.scale = (0.2,0.075)
             self.shopGameBTN.color = self.btnColor
 
@@ -388,7 +439,7 @@ class MenuScreen(Entity):
             self.titleScreen.text = 'chronogate'
             self.titleScreen.x = -.185
 
-            self.shopGameBTN.scale= (0.2,0.075)
+            self.shopGameBTN.scale = (0.2,0.075)
             self.shopGameBTN.color = self.btnColor
         elif self.newGameBTN.x == -0.75 and self.optionsGameBTN.color == (0,0,0,60):
             #Switch to back credits
@@ -397,17 +448,18 @@ class MenuScreen(Entity):
             self.shopMenuP.position = (0,0)
 
             self.shopGameBTN.scale = (0.24,0.09)
-            self.shopGameBTN.color =(0,0,0,60)
+            self.shopGameBTN.color = (0,0,0,60)
             self.volume_sliderP.position = (24, 4)
             self.titleScreen.text = 'Credits'
             self.titleScreen.x = -.1
-            self.sensDecreaseP.position=(2,0)
-            self.sensIncreaseP.position=(2,0)
-            self.sensTextP.position=(2,0)
-            self.sensTitleP.position=(2.05,.1)
+            self.sensDecreaseP.position = (2,0)
+            self.sensIncreaseP.position = (2,0)
+            self.sensTextP.position = (2,0)
+            self.sensTitleP.position = (2.05,.1)
+            self.controlsP.position=(2,-0.2)
 
             self.optionsGameBTN.scale = (0.2,0.075)
-            self.optionsGameBTN.color  =self.btnColor       
+            self.optionsGameBTN.color = self.btnColor       
 
     def quit_(self):
         if not self.clickAudio.playing:
@@ -432,7 +484,6 @@ class MenuScreen(Entity):
                 elif self.skipTimer < 0:
                     self.skipTimer = 0
 
-
 window.title = "ChronoGate"
 app=Ursina(borderless=False,vsync=60,development_mode=True,use_ingame_console=True)
 with open("pyfiles/Scripts/Functions.py", "r") as f:
@@ -443,4 +494,10 @@ Sky(texture='assets/textures/misc/sky.jpg')
 enemyTimestopped = False
 PlayerSensitvity=(40,40)
 menu=MenuScreen()
+def input(key):
+    if held_keys['control'] and key=='h':
+        window.console.text_field.enabled = not window.console.text_field.enabled
+fuckyoubatman="Fuckyoubatman"
+window.console.text_input = fuckyoubatman
+window.console.text_field.enabled = not window.console.text_field.enabled
 app.run()
