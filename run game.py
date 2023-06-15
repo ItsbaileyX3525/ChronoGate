@@ -485,7 +485,10 @@ class MenuScreen(Entity):
                     self.skipTimer = 0
 
 window.title = "ChronoGate"
-app=Ursina(borderless=False,vsync=60,development_mode=True,use_ingame_console=True)
+
+app=Ursina(borderless=False,vsync=60,development_mode=False,use_ingame_console=True,fullscreen=False)
+window.entity_counter.enabled=False
+window.collider_counter.enabled=False
 with open("pyfiles/Scripts/Functions.py", "r") as f:
     exec(f.read())
 
@@ -497,7 +500,6 @@ menu=MenuScreen()
 def input(key):
     if held_keys['control'] and key=='h':
         window.console.text_field.enabled = not window.console.text_field.enabled
-fuckyoubatman="Fuckyoubatman"
-window.console.text_input = fuckyoubatman
+window.console.text_input = "Fuckyoubatman"
 window.console.text_field.enabled = not window.console.text_field.enabled
 app.run()
