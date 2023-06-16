@@ -1,6 +1,7 @@
 from ursina import *
 from ursina.prefabs.first_person_controller import *
 import threading
+import random
 
 class Player(Entity):
     def __init__(self, **kwargs):
@@ -8,6 +9,9 @@ class Player(Entity):
         #General player stuff
         self.HitPoints = 100
         self.ManaPoints = 20
+        self.Level = 1
+        self.Experience = 0
+        self.ExperienceNeed = 100
         
         #Head bobbing crap
         self.bobbing_amount = 0.1
@@ -15,11 +19,11 @@ class Player(Entity):
         self.bobbing_timer = 0.0
         
         #Spells & stuff
-        self.CurrentEquiped = 'TimeStop'
+        self.CurrentEquiped = 'FireWave'
         self.SpellEquiped = Text(text='Current spell: None',x=-.87,y=-.45)
-        self.Spells = ['TimeStop', 'FireBall', ]
+        self.Spells = ['TimeStop', 'FireWave', ]
         self.Timestop = TimeStop()
-        self.Fireball = Fireball()
+        self.Firewave = Firewave()
         
         #Audios for the player
         self.normalFootSteps=Audio('assets/audio/player/footslow.ogg',autoplay=False,loop=False,volume=.5)
@@ -27,17 +31,15 @@ class Player(Entity):
 
     def UseMana(self, amount):
         if amount>self.ManaPoints:
-            print("Not enough mana!")
             return False
         elif amount<=self.ManaPoints:
             self.ManaPoints -= amount
-            print("Used mana")
             return True
 
     def UseMagic(self):
         spell_map = {
             'TimeStop': self.Timestop.Activate,
-            'FireBall': self.Fireball.Activate,
+            'FireWave': self.Firewave.Activate,
         }
         if self.CurrentEquiped in spell_map and self.CurrentEquiped in self.Spells:
             spell_map[self.CurrentEquiped]()
@@ -49,7 +51,7 @@ class Player(Entity):
 
     def update(self):
         if self.HitPoints <= 0:
-            print("Dead")
+            pass #Add death stuff here
         if any(held_keys[key] for key in ['w', 'a', 's', 'd']):
             self.bobbing_timer += self.bobbing_speed
             vertical_offset = abs(math.sin(self.bobbing_timer)) * self.bobbing_amount
@@ -100,7 +102,6 @@ class TimeStop():
                 else:
                     pass
                 self.pauseTime()
-                print(f"Remaining mana: {player.ManaPoints}")
             elif not EnoughMana:
                 pass
 
@@ -115,7 +116,7 @@ class TimeStop():
         self.TimeresumeAudio.play()
         self.canRunAgain.start() 
     
-class Fireball(Entity):
+class Firewave(Entity):
     def __init__(self, add_to_scene_entities=True, **kwargs):
         super().__init__(add_to_scene_entities, **kwargs)
         self.model='cirlce'
@@ -123,7 +124,9 @@ class Fireball(Entity):
         self.FireballAudio = Audio('assets/audio/spells/FireShot.ogg')
         self.canRun =  True
         self.Activated = False
-        self.canRunAgain=Sequence(Wait(5),Func(setattr, self, 'canRun', True),auto_destroy=False)
+        self.canRunAgain=Sequence(Wait(12),Func(setattr, self, 'canRun', True),auto_destroy=False)
+        self.baseDamageAmount = 12
+        self.damageMultipler = 1
         
     def Activate(self):
         if self.canRun:
@@ -133,14 +136,19 @@ class Fireball(Entity):
                     self.FireballAudio.play()
                 else:
                     pass
-                self.shootFireball()
-                print(f'Remaining mana: {player.ManaPoints}')
+                self.shootFirewave()
             elif not EnoughMana:
                 pass
             
-    def shootFireball(self):
-        pass
-        #self.            
+    def shootFirewave(self):
+        damageAmount = self.baseDamageAmount * self.damageMultipler
+        for enemy in enemyList:
+            distFromPlayer=distance_2d(playerController, enemy)
+            if distFromPlayer<=6:
+                enemy.hitPoints -= damageAmount
+            else:
+                pass
+        
    
     def update(self):
         pass#if self.Activated:
@@ -161,6 +169,10 @@ class EnemyNormal(Entity):
 
     def MovementToPlayer(self):
         self.position += self.forward * time.dt
+
+    def OnDeath(self):
+        player.Experience += random.randint(1,5)
+        destroy(self)
 
     def update(self):
         self.dist = distance(playerController.position, self.position)
@@ -183,16 +195,20 @@ class EnemyNormal(Entity):
         else:
             if not self.touchingBorder and not player.Timestop.enemyTimestopped:
                 self.position += self.forward * time.dt * 2
+        if self.hitPoints<=0:
+            self.OnDeath()
 
 
 window.title = "ChronoGate - Playground"
 
 app=Ursina(borderless=False,vsync=60,development_mode=True,use_ingame_console=True,fullscreen=False)
 PlayerSensitvity=(40,40)
+enemyList=[]
 player=Player()
 playerController=FirstPersonController()
 playerController.mouse_sensitivity = PlayerSensitvity
-enemyOne = EnemyNormal(x=20)
+enemyList.append(EnemyNormal(x=20))
+enemyList.append(EnemyNormal(x=40))
 GROUND=Entity(model='plane',scale=1000,texture='grass',texture_scale=(32,32),collider='box')
 Sky(texture='assets/textures/misc/sky.jpg')
 
