@@ -2,6 +2,7 @@ from ursina import *
 from ursina.prefabs.first_person_controller import *
 import threading
 import random
+import json
 
 class Player(Entity):
     def __init__(self, **kwargs):
@@ -11,7 +12,7 @@ class Player(Entity):
         self.ManaPoints = 20
         self.Level = 1
         self.Experience = 0
-        self.ExperienceNeed = 100
+        self.ExperienceNeeded = 100
         
         #Head bobbing crap
         self.bobbing_amount = 0.1
@@ -29,6 +30,93 @@ class Player(Entity):
         self.normalFootSteps=Audio('assets/audio/player/footslow.ogg',autoplay=False,loop=False,volume=.5)
         self.sprintFootSteps=Audio('assets/audio/player/footfast.ogg',autoplay=False,loop=False,volume=.5)
 
+        #keybinds
+        with open('assets/data/controls.json') as file:
+            self.data = json.load(file)
+
+        self.a = self.data['A']
+        self.b = self.data['B']
+        self.c = self.data['C']
+        self.d = self.data['D']
+        self.e = self.data['E']
+        self.f = self.data['F']
+        self.g = self.data['G']
+        self.h = self.data['H']
+        self.i = self.data['I']
+        self.j = self.data['J']
+        self.k = self.data['K']
+        self.l = self.data['L']
+        self.m = self.data['M']
+        self.n = self.data['N']
+        self.o = self.data['O']
+        self.p = self.data['P']
+        self.q = self.data['Q']
+        self.r = self.data['R']
+        self.s = self.data['S']
+        self.t = self.data['T']
+        self.u = self.data['U']
+        self.v = self.data['V']
+        self.w = self.data['W']
+        self.xb = self.data['X']
+        self.yb = self.data['Y']
+        self.zb = self.data['Z']
+        self.control = self.data['Control']
+        self.shift = self.data['Shift']
+        input_handler.rebind('a', '')
+        input_handler.rebind('b', '')
+        input_handler.rebind('c', '')
+        input_handler.rebind('d', '')
+        input_handler.rebind('e', '')
+        input_handler.rebind('f', '')
+        input_handler.rebind('g', '')
+        input_handler.rebind('h', '')
+        input_handler.rebind('i', '')
+        input_handler.rebind('j', '')
+        input_handler.rebind('k', '')
+        input_handler.rebind('l', '')
+        input_handler.rebind('m', '')
+        input_handler.rebind('n', '')
+        input_handler.rebind('o', '')
+        input_handler.rebind('p', '')
+        input_handler.rebind('q', '')
+        input_handler.rebind('r', '')
+        input_handler.rebind('s', '')
+        input_handler.rebind('t', '')
+        input_handler.rebind('u', '')
+        input_handler.rebind('v', '')
+        input_handler.rebind('w', '')
+        input_handler.rebind('x', '')
+        input_handler.rebind('y', '')
+        input_handler.rebind('z', '')
+        input_handler.rebind('shift', '')
+        input_handler.rebind(self.w, 'w')
+        input_handler.rebind(self.a, 'a')
+        input_handler.rebind(self.s, 's')
+        input_handler.rebind(self.d, 'd')
+        input_handler.rebind(self.f, 'f')
+        input_handler.rebind(self.g, 'g')
+        input_handler.rebind(self.h, 'h')
+        input_handler.rebind(self.i, 'i')
+        input_handler.rebind(self.j, 'j')
+        input_handler.rebind(self.k, 'k')
+        input_handler.rebind(self.l, 'l')
+        input_handler.rebind(self.m, 'm')
+        input_handler.rebind(self.n, 'n')
+        input_handler.rebind(self.o, 'o')
+        input_handler.rebind(self.p, 'p')
+        input_handler.rebind(self.q, 'q')
+        input_handler.rebind(self.r, 'r')
+        input_handler.rebind(self.s, 's')
+        input_handler.rebind(self.t, 't')
+        input_handler.rebind(self.u, 'u')
+        input_handler.rebind(self.v, 'v')
+        input_handler.rebind(self.w, 'w')
+        input_handler.rebind(self.xb, 'x')
+        input_handler.rebind(self.yb, 'y')
+        input_handler.rebind(self.zb, 'z')
+        input_handler.rebind(self.shift, 'shift')
+
+
     def UseMana(self, amount):
         if amount>self.ManaPoints:
             return False
@@ -44,6 +132,10 @@ class Player(Entity):
         if self.CurrentEquiped in spell_map and self.CurrentEquiped in self.Spells:
             spell_map[self.CurrentEquiped]()
 
+
+    def OnLevelUp(self):
+        self.Level += 1
+        self.ExperienceNeeded *= 2
 
     def input(self, key):
         if key=='e':
@@ -117,7 +209,7 @@ class TimeStop():
         self.canRunAgain.start() 
     
 class Firewave(Entity):
-    def __init__(self, add_to_scene_entities=True, **kwargs):
+    def __init__(self, add_to_scene_entities=False, **kwargs):
         super().__init__(add_to_scene_entities, **kwargs)
         self.model='cirlce'
         self.texture='assets/textures/spells/fire.jpg'
@@ -204,8 +296,8 @@ window.title = "ChronoGate - Playground"
 app=Ursina(borderless=False,vsync=60,development_mode=True,use_ingame_console=True,fullscreen=False)
 PlayerSensitvity=(40,40)
 enemyList=[]
-player=Player()
 playerController=FirstPersonController()
+player=Player()
 playerController.mouse_sensitivity = PlayerSensitvity
 enemyList.append(EnemyNormal(x=20))
 enemyList.append(EnemyNormal(x=40))
