@@ -870,7 +870,7 @@ class DeathScreen(Entity):
         self.s = Sequence(Wait(4),Func(self.loadMenu)).start()
         self.Added=[self.audio,self.s]
         self.entities.extend(self.Added)
-        
+
     def loadMenu(self):
         MenuScreenDeath(parent=self)
         for e in self.entities:
@@ -887,12 +887,16 @@ class Keybinds(Entity):
         self.z=-1
         with open('assets/data/controls.json') as file:
             self.data = json.load(file)
-            
+
+        #Keys that can't be binded 
         self.key_exceptions = ['left mouse down', 'left mouse hold', 'left mouse up', 'escape', 'double click', 'right mouse down',
-        'right mouse hold', 'right mouse up']    
-        
+        'right mouse hold', 'right mouse up', '`', '` hold', '` up', "'","' up", "' hold", '#', '# up', '# hold', ']', '[', '=',
+        '= up', '= hold', '-', '- up', '- hold', 'tab', 'tab up', 'tab hold', ',', ', up', ', hold', '.', '. up', '. hold']
+
+        #Keys that interrupt the binding process
         self.execpt = ['left mouse down', 'left mouse hold', 'escape', 'double click', 'right mouse down',
-        'right mouse hold', 'right mouse up']    
+        'right mouse hold', 'right mouse up']
+
         self.changeW = False
         self.changeA = False
         self.changeS = False
@@ -917,10 +921,10 @@ class Keybinds(Entity):
         self.ButtonASeq = Sequence(Wait(.25),Func(setattr, self.ButtonA, "text", f"> {self.data['A']} <"), Wait(.25),Func(setattr, self.ButtonA, "text", f">  {self.data['A']}  <"),Wait(.25), Func(setattr, self.ButtonA, "text", f">   {self.data['A']}   <"),Wait(.25), Func(setattr, self.ButtonA, "text", f">  {self.data['A']}  <"),loop=True)
         self.ButtonSSeq = Sequence(Wait(.25),Func(setattr, self.ButtonS, "text", f"> {self.data['S']} <"), Wait(.25),Func(setattr, self.ButtonS, "text", f">  {self.data['S']}  <"),Wait(.25), Func(setattr, self.ButtonS, "text", f">   {self.data['S']}   <"),Wait(.25), Func(setattr, self.ButtonS, "text", f">  {self.data['S']}  <"),loop=True)
         self.ButtonDSeq = Sequence(Wait(.25),Func(setattr, self.ButtonD, "text", f"> {self.data['D']} <"), Wait(.25),Func(setattr, self.ButtonD, "text", f">  {self.data['D']}  <"),Wait(.25), Func(setattr, self.ButtonD, "text", f">   {self.data['D']}   <"),Wait(.25), Func(setattr, self.ButtonD, "text", f">  {self.data['D']}  <"),loop=True)
-        
+
         self.ButtonLeave = Button(radius=.2,text='Exit',scale=(.15,.07),y=-.4,on_click = self.LeaveKeybinds,z=-1.1)
         self.Entities=[self.ButtonLeave,self.ButtonA,self.ButtonW,self.ButtonS,self.ButtonD,self.ButtonAText,self.ButtonWText,self.ButtonSText,self.ButtonDText]
-        
+
     def ChangeLetter(self, arg):
         match arg:
             case 'w':
@@ -941,14 +945,14 @@ class Keybinds(Entity):
                 self.ButtonDSeq.start()
             case _:
                 print("None")
-    
+
     def LeaveKeybinds(self):
         for e in self.egg.Entities:
             e.enabled=True
         for e in self.Entities:
             destroy(e)
         destroy(self)
-          
+
     def input(self, key):
         if self.changeW:
             if key not in self.key_exceptions and key:
