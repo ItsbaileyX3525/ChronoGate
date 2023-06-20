@@ -20,7 +20,7 @@ class Player(Entity):
         self.bobbing_timer = 0.0
         
         #Spells & stuff
-        self.CurrentEquiped = 'FireWave'
+        self.CurrentEquiped = 'TimeStop'
         self.SpellEquiped = Text(text='Current spell: None',x=-.87,y=-.45)
         self.Spells = ['TimeStop', 'FireWave', ]
         self.Timestop = TimeStop()
@@ -90,10 +90,13 @@ class Player(Entity):
         input_handler.rebind('z', '')
         input_handler.rebind('shift', '')
         input_handler.rebind(self.w, 'w')
+        input_handler.rebind(self.c, 'c')
+        input_handler.rebind(self.b, 'b')
         input_handler.rebind(self.a, 'a')
         input_handler.rebind(self.s, 's')
         input_handler.rebind(self.d, 'd')
         input_handler.rebind(self.f, 'f')
+        input_handler.rebind(self.e, 'e')
         input_handler.rebind(self.g, 'g')
         input_handler.rebind(self.h, 'h')
         input_handler.rebind(self.i, 'i')
