@@ -1,7 +1,109 @@
 from ursina import *
-from ursina.prefabs.first_person_controller import *
 import threading
 import json
+
+class FirstPersonController(Entity):
+    def __init__(self, **kwargs):
+        self.cursor = Entity(parent=camera.ui, model='quad', color=color.pink, scale=.008, rotation_z=45)
+        super().__init__()
+        self.speed = 5
+        self.height = 2
+        self.camera_pivot = Entity(parent=self, y=self.height)
+
+        camera.parent = self.camera_pivot
+        camera.position = (0,0,0)
+        camera.rotation = (0,0,0)
+        camera.fov = 90
+        mouse.locked = True
+        self.mouse_sensitivity = Vec2(40, 40)
+
+        self.gravity = 1
+        self.grounded = False
+        self.jump_height = 2
+        self.jump_up_duration = .5
+        self.fall_after = .35 
+        self.jumping = False
+        self.air_time = 0
+
+        self.traverse_target = scene
+        self.ignore_list = [self, ]
+
+        for key, value in kwargs.items():
+            setattr(self, key ,value)
+
+        if self.gravity:
+            ray = raycast(self.world_position+(0,self.height,0), self.down, traverse_target=self.traverse_target, ignore=self.ignore_list)
+            if ray.hit:
+                self.y = ray.world_point.y
+
+    def update(self):
+        self.rotation_y += mouse.velocity[0] * self.mouse_sensitivity[1]
+
+        self.camera_pivot.rotation_x -= mouse.velocity[1] * self.mouse_sensitivity[0]
+        self.camera_pivot.rotation_x= clamp(self.camera_pivot.rotation_x, -90, 90)
+
+        self.direction = Vec3(
+            self.forward * (held_keys[playerControllerWalkW] - held_keys[playerControllerWalkS])
+            + self.right * (held_keys[playerControllerWalkD] - held_keys[playerControllerWalkA])
+            ).normalized()
+
+        feet_ray = raycast(self.position+Vec3(0,0.5,0), self.direction, traverse_target=self.traverse_target, ignore=self.ignore_list, distance=.5, debug=False)
+        head_ray = raycast(self.position+Vec3(0,self.height-.1,0), self.direction, traverse_target=self.traverse_target, ignore=self.ignore_list, distance=.5, debug=False)
+        if not feet_ray.hit and not head_ray.hit:
+            move_amount = self.direction * time.dt * self.speed
+
+            if raycast(self.position+Vec3(-.0,1,0), Vec3(1,0,0), distance=.5, traverse_target=self.traverse_target, ignore=self.ignore_list).hit:
+                move_amount[0] = min(move_amount[0], 0)
+            if raycast(self.position+Vec3(-.0,1,0), Vec3(-1,0,0), distance=.5, traverse_target=self.traverse_target, ignore=self.ignore_list).hit:
+                move_amount[0] = max(move_amount[0], 0)
+            if raycast(self.position+Vec3(-.0,1,0), Vec3(0,0,1), distance=.5, traverse_target=self.traverse_target, ignore=self.ignore_list).hit:
+                move_amount[2] = min(move_amount[2], 0)
+            if raycast(self.position+Vec3(-.0,1,0), Vec3(0,0,-1), distance=.5, traverse_target=self.traverse_target, ignore=self.ignore_list).hit:
+                move_amount[2] = max(move_amount[2], 0)
+            self.position += move_amount
+
+        if self.gravity:
+            ray = raycast(self.world_position+(0,self.height,0), self.down, traverse_target=self.traverse_target, ignore=self.ignore_list)
+
+            if ray.distance <= self.height+.1:
+                if not self.grounded:
+                    self.land()
+                self.grounded = True
+                if ray.world_normal.y > .7 and ray.world_point.y - self.world_y < .5: # walk up slope
+                    self.y = ray.world_point[1]
+                return
+            else:
+                self.grounded = False
+
+            self.y -= min(self.air_time, ray.distance-.05) * time.dt * 100
+            self.air_time += time.dt * .25 * self.gravity
+
+    def input(self, key):
+        if key == 'space':
+            self.jump()
+
+    def jump(self):
+        if not self.grounded:
+            return
+        self.grounded = False
+        self.animate_y(self.y+self.jump_height, self.jump_up_duration, resolution=int(1//time.dt), curve=curve.out_expo)
+        invoke(self.start_fall, delay=self.fall_after)
+
+    def start_fall(self):
+        self.y_animator.pause()
+        self.jumping = False
+
+    def land(self):
+        self.air_time = 0
+        self.grounded = True
+
+    def on_enable(self):
+        mouse.locked = True
+        self.cursor.enabled = True
+
+    def on_disable(self):
+        mouse.locked = False
+        self.cursor.enabled = False
 
 class Player(Entity):
     def __init__(self, **kwargs):
@@ -33,90 +135,11 @@ class Player(Entity):
         with open('assets/data/controls.json') as file:
             self.data = json.load(file)
 
-        self.a = self.data['A']
-        self.b = self.data['B']
-        self.c = self.data['C']
-        self.d = self.data['D']
-        self.e = self.data['E']
-        self.f = self.data['F']
-        self.g = self.data['G']
-        self.h = self.data['H']
-        self.i = self.data['I']
-        self.j = self.data['J']
-        self.k = self.data['K']
-        self.l = self.data['L']
-        self.m = self.data['M']
-        self.n = self.data['N']
-        self.o = self.data['O']
-        self.p = self.data['P']
-        self.q = self.data['Q']
-        self.r = self.data['R']
-        self.s = self.data['S']
-        self.t = self.data['T']
-        self.u = self.data['U']
-        self.v = self.data['V']
-        self.w = self.data['W']
-        self.xb = self.data['X']
-        self.yb = self.data['Y']
-        self.zb = self.data['Z']
-        self.control = self.data['Control']
-        self.shift = self.data['Shift']
-        input_handler.rebind('a', '')
-        input_handler.rebind('b', '')
-        input_handler.rebind('c', '')
-        input_handler.rebind('d', '')
-        input_handler.rebind('e', '')
-        input_handler.rebind('f', '')
-        input_handler.rebind('g', '')
-        input_handler.rebind('h', '')
-        input_handler.rebind('i', '')
-        input_handler.rebind('j', '')
-        input_handler.rebind('k', '')
-        input_handler.rebind('l', '')
-        input_handler.rebind('m', '')
-        input_handler.rebind('n', '')
-        input_handler.rebind('o', '')
-        input_handler.rebind('p', '')
-        input_handler.rebind('q', '')
-        input_handler.rebind('r', '')
-        input_handler.rebind('s', '')
-        input_handler.rebind('t', '')
-        input_handler.rebind('u', '')
-        input_handler.rebind('v', '')
-        input_handler.rebind('w', '')
-        input_handler.rebind('x', '')
-        input_handler.rebind('y', '')
-        input_handler.rebind('z', '')
-        input_handler.rebind('shift', '')
-        input_handler.rebind(self.w, 'w')
-        input_handler.rebind(self.c, 'c')
-        input_handler.rebind(self.b, 'b')
-        input_handler.rebind(self.a, 'a')
-        input_handler.rebind(self.s, 's')
-        input_handler.rebind(self.d, 'd')
-        input_handler.rebind(self.f, 'f')
-        input_handler.rebind(self.e, 'e')
-        input_handler.rebind(self.g, 'g')
-        input_handler.rebind(self.h, 'h')
-        input_handler.rebind(self.i, 'i')
-        input_handler.rebind(self.j, 'j')
-        input_handler.rebind(self.k, 'k')
-        input_handler.rebind(self.l, 'l')
-        input_handler.rebind(self.m, 'm')
-        input_handler.rebind(self.n, 'n')
-        input_handler.rebind(self.o, 'o')
-        input_handler.rebind(self.p, 'p')
-        input_handler.rebind(self.q, 'q')
-        input_handler.rebind(self.r, 'r')
-        input_handler.rebind(self.s, 's')
-        input_handler.rebind(self.t, 't')
-        input_handler.rebind(self.u, 'u')
-        input_handler.rebind(self.v, 'v')
-        input_handler.rebind(self.w, 'w')
-        input_handler.rebind(self.xb, 'x')
-        input_handler.rebind(self.yb, 'y')
-        input_handler.rebind(self.zb, 'z')
-        input_handler.rebind(self.shift, 'shift')
+        self.walkForward = playerControllerWalkW
+        self.strafeLeft = playerControllerWalkA
+        self.walkBackward = playerControllerWalkS
+        self.strafeRight = playerControllerWalkD
+        self.sprint = self.data['Shift']
 
 
     def UseMana(self, amount):
@@ -146,7 +169,7 @@ class Player(Entity):
     def update(self):
         if self.HitPoints <= 0:
             DeathScreen()
-        if any(held_keys[key] for key in ['w', 'a', 's', 'd']):
+        if any(held_keys[key] for key in [self.walkForward, self.walkBackward, self.strafeRight, self.strafeLeft]):
             self.bobbing_timer += self.bobbing_speed
             vertical_offset = abs(math.sin(self.bobbing_timer)) * self.bobbing_amount
             camera.y = vertical_offset
@@ -154,11 +177,11 @@ class Player(Entity):
             if not self.normalFootSteps.playing:
                 self.normalFootSteps.play()
 
-            if held_keys['shift']:
-                if held_keys['w']:
+            if held_keys[self.sprint]:
+                if held_keys[self.walkForward]:
                     playerController.speed = 16
                     self.bobbing_speed = 0.2
-                elif held_keys['s']:
+                elif held_keys[self.walkBackward]:
                     playerController.speed = 12
                     self.bobbing_speed = 0.15
             else:
@@ -718,12 +741,18 @@ class MenuScreen(Entity):
         invoke(self.startGame,delay=2)
 
     def startGame(self):
-        global GROUND,player,playerController,enemyOne,PauseScreen
+        global GROUND,player,playerController,enemyOne,PauseScreen,playerControllerWalkW,playerControllerWalkS,playerControllerWalkA,playerControllerWalkD
         self.blackScreen.fade_out(duration=.8)
         destroy(self.WormholeTravel)
         destroy(self)
         self.s4.pause()
         player=Player()
+        with open('assets/data/controls.json') as file:
+            self.data = json.load(file)
+        playerControllerWalkW = self.data['W']
+        playerControllerWalkS = self.data['S']
+        playerControllerWalkA = self.data['A']
+        playerControllerWalkD = self.data['D']
         playerController=FirstPersonController()
         playerController.mouse_sensitivity = PlayerSensitvity
         enemyOne = EnemyNormal(x=20)
@@ -890,7 +919,7 @@ class Keybinds(Entity):
         self.color=color.gray
         self.scale_x=2
         self.z=-199
-        self.ignore_paused=True
+        self.ignore_paused=True        
         with open('assets/data/controls.json') as file:
             self.data = json.load(file)
 
@@ -963,7 +992,6 @@ class Keybinds(Entity):
                 self.changeW = False
                 self.ButtonW.text = key
                 self.data['W'] = self.ButtonW.text
-                input_handler.rebind(self.ButtonW.text, 'w')
                 self.ButtonWSeq = Sequence(Wait(.25),Func(setattr, self.ButtonW, "text", f"> {self.data['W']} <"), Wait(.25),Func(setattr, self.ButtonW, "text", f">  {self.data['W']}  <"),Wait(.25), Func(setattr, self.ButtonW, "text", f">   {self.data['W']}   <"),Wait(.25), Func(setattr, self.ButtonW, "text", f">  {self.data['W']}  <"),loop=True)
             elif key in self.execpt:
                 self.changeW = False
@@ -976,7 +1004,6 @@ class Keybinds(Entity):
                 self.changeA = False
                 self.ButtonA.text = key
                 self.data['A'] = self.ButtonA.text
-                input_handler.rebind(self.ButtonA.text, 'a')
                 self.ButtonASeq = Sequence(Wait(.25),Func(setattr, self.ButtonA, "text", f"> {self.data['A']} <"), Wait(.25),Func(setattr, self.ButtonA, "text", f">  {self.data['A']}  <"),Wait(.25), Func(setattr, self.ButtonA, "text", f">   {self.data['A']}   <"),Wait(.25), Func(setattr, self.ButtonA, "text", f">  {self.data['A']}  <"),loop=True)
             elif key in self.execpt:
                 self.changeA = False
@@ -989,7 +1016,6 @@ class Keybinds(Entity):
                 self.changeS = False
                 self.ButtonS.text = key
                 self.data['S'] = self.ButtonS.text
-                input_handler.rebind(self.ButtonS.text, 's')
                 self.ButtonSSeq = Sequence(Wait(.25),Func(setattr, self.ButtonS, "text", f"> {self.data['S']} <"), Wait(.25),Func(setattr, self.ButtonS, "text", f">  {self.data['S']}  <"),Wait(.25), Func(setattr, self.ButtonS, "text", f">   {self.data['S']}   <"),Wait(.25), Func(setattr, self.ButtonS, "text", f">  {self.data['S']}  <"),loop=True)
             elif key in self.execpt:
                 self.changeS = False
@@ -1002,13 +1028,24 @@ class Keybinds(Entity):
                 self.changeD = False
                 self.ButtonD.text = key
                 self.data['D'] = self.ButtonD.text
-                input_handler.rebind(self.ButtonD.text, 'd')
                 self.ButtonDSeq = Sequence(Wait(.25),Func(setattr, self.ButtonD, "text", f"> {self.data['D']} <"), Wait(.25),Func(setattr, self.ButtonD, "text", f">  {self.data['D']}  <"),Wait(.25), Func(setattr, self.ButtonD, "text", f">   {self.data['D']}   <"),Wait(.25), Func(setattr, self.ButtonD, "text", f">  {self.data['D']}  <"),loop=True)
             elif key in self.execpt:
                 self.changeD = False
                 self.ButtonDSeq.kill()
                 self.ButtonD.text = self.data['D']
                 self.ButtonDSeq = Sequence(Wait(.25),Func(setattr, self.ButtonD, "text", f"> {self.data['D']} <"), Wait(.25),Func(setattr, self.ButtonD, "text", f">  {self.data['D']}  <"),Wait(.25), Func(setattr, self.ButtonD, "text", f">   {self.data['D']}   <"),Wait(.25), Func(setattr, self.ButtonD, "text", f">  {self.data['D']}  <"),loop=True)
+        global playerControllerWalkW,playerControllerWalkS,playerControllerWalkA,playerControllerWalkD
+        playerControllerWalkW = self.ButtonW.text
+        playerControllerWalkS = self.ButtonS.text
+        playerControllerWalkD = self.ButtonD.text
+        playerControllerWalkA = self.ButtonA.text
+        try:
+            player.walkForward = playerControllerWalkW
+            player.walkBackward = playerControllerWalkS
+            player.strafeRight = playerControllerWalkA
+            player.strafeLeft = playerControllerWalkD
+        except:
+            pass
         with open('assets/data/controls.json', 'w') as file:
             json.dump(self.data, file,indent=4)
 
@@ -1182,12 +1219,14 @@ window.title = "ChronoGate"
 app=Ursina(borderless=False,vsync=60,development_mode=False,fullscreen=False)
 window.entity_counter.enabled=False
 window.collider_counter.enabled=False
-with open("pyfiles/Scripts/Functions.py", "r") as f:
-    exec(f.read())
 
 Sky(texture='assets/textures/misc/sky.jpg')
 
 enemyTimestopped = False
+playerControllerWalkW = 'w'
+playerControllerWalkS = 's'
+playerControllerWalkA = 'a'
+playerControllerWalkD = 'd'
 PlayerSensitvity=(40,40)
 menu=MenuScreen()
 PauseScreen = False
@@ -1196,4 +1235,5 @@ def input(key):
     if key == 'escape':
         if PauseScreen is None:
             PauseScreen = PauseMenuScreen()
+
 app.run()
