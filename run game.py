@@ -896,7 +896,7 @@ class Keybinds(Entity):
 
         self.key_exceptions = ['left mouse down', 'left mouse hold', 'left mouse up', 'escape', 'double click', 'right mouse down',
         'right mouse hold', 'right mouse up', '`', '` hold', '` up', "'","' up", "' hold", '#', '# up', '# hold', ']', '[', '=',
-        '= up', '= hold', '-', '- up', '- hold', 'tab', 'tab up', 'tab hold', ',', ', up', ', hold', '.', '. up', '. hold', 'a up', 'a hold']
+        '= up', '= hold', '-', '- up', '- hold', 'tab', 'tab up', 'tab hold', ',', ', up', ', hold', '.', '. up', '. hold']
 
         self.execpt = ['left mouse down', 'left mouse hold', 'escape', 'double click', 'right mouse down',
         'right mouse hold', 'right mouse up']    
@@ -1091,8 +1091,6 @@ class PauseMenuScreen(Entity):
 
         for e in self.Entities:
             e.ingore_paused = True
-            for x in e.children:
-                x.ignore_paused=True
 
     def CloseGame(self):
         Background = Entity(parent=camera.ui,model='quad', color=color.gray,scale=(.8,.4),z=-10)
