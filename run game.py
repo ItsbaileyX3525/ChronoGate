@@ -1,6 +1,10 @@
 from ursina import *
 import threading
 import json
+from pathlib import Path
+import glob
+main_directory = Path(__file__).resolve().parent
+
 
 class FirstPersonController(Entity):
     def __init__(self, **kwargs):
@@ -132,7 +136,12 @@ class Player(Entity):
         self.sprintFootSteps=Audio('assets/audio/player/footfast.ogg',autoplay=False,loop=False,volume=.5)
 
         #keybinds
-        with open('assets/data/controls.json') as file:
+        file_pattern = str(main_directory / 'assets/data/controls.json')
+        files = glob.glob(file_pattern)
+        if files:
+            file_path = files[0]
+            print(file_path)
+        with open(file_path) as file:
             self.data = json.load(file)
 
         self.walkForward = playerControllerWalkW
@@ -747,7 +756,14 @@ class MenuScreen(Entity):
         destroy(self)
         self.s4.pause()
         player=Player()
-        with open('assets/data/controls.json') as file:
+        file_pattern = str(main_directory / 'assets/data/controls.json')
+        files = glob.glob(file_pattern)
+        if files:
+            file_path = files[0]
+            print(file_path)
+        with open(file_path) as file:
+            self.data = json.load(file)
+        with open(file_path) as file:
             self.data = json.load(file)
         playerControllerWalkW = self.data['W']
         playerControllerWalkS = self.data['S']
@@ -919,8 +935,15 @@ class Keybinds(Entity):
         self.color=color.gray
         self.scale_x=2
         self.z=-199
-        self.ignore_paused=True        
-        with open('assets/data/controls.json') as file:
+        self.ignore_paused=True
+        file_pattern = str(main_directory / 'assets/data/controls.json')
+        files = glob.glob(file_pattern)
+        if files:
+            file_path = files[0]
+            print(file_path)
+        with open(file_path) as file:
+            self.data = json.load(file)
+        with open(file_path) as file:
             self.data = json.load(file)
 
         self.key_exceptions = ['left mouse down', 'left mouse hold', 'left mouse up', 'escape', 'double click', 'right mouse down',
@@ -1046,7 +1069,14 @@ class Keybinds(Entity):
             player.strafeLeft = playerControllerWalkD
         except:
             pass
-        with open('assets/data/controls.json', 'w') as file:
+        file_pattern = str(main_directory / 'assets/data/controls.json')
+        files = glob.glob(file_pattern)
+        if files:
+            file_path = files[0]
+            print(file_path)
+        with open(file_path) as file:
+            self.data = json.load(file)
+        with open(file_path, 'w') as file:
             json.dump(self.data, file,indent=4)
 
 class PauseMenuScreen(Entity):
