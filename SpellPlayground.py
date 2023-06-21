@@ -20,7 +20,7 @@ class Player(Entity):
         self.bobbing_timer = 0.0
         
         #Spells & stuff
-        self.CurrentEquiped = 'TimeStop'
+        self.CurrentEquiped = 'FireWave'
         self.SpellEquiped = Text(text='Current spell: None',x=-.87,y=-.45)
         self.Spells = ['TimeStop', 'FireWave', ]
         self.Timestop = TimeStop()
@@ -62,63 +62,6 @@ class Player(Entity):
         self.zb = self.data['Z']
         self.control = self.data['Control']
         self.shift = self.data['Shift']
-        input_handler.rebind('a', '')
-        input_handler.rebind('b', '')
-        input_handler.rebind('c', '')
-        input_handler.rebind('d', '')
-        input_handler.rebind('e', '')
-        input_handler.rebind('f', '')
-        input_handler.rebind('g', '')
-        input_handler.rebind('h', '')
-        input_handler.rebind('i', '')
-        input_handler.rebind('j', '')
-        input_handler.rebind('k', '')
-        input_handler.rebind('l', '')
-        input_handler.rebind('m', '')
-        input_handler.rebind('n', '')
-        input_handler.rebind('o', '')
-        input_handler.rebind('p', '')
-        input_handler.rebind('q', '')
-        input_handler.rebind('r', '')
-        input_handler.rebind('s', '')
-        input_handler.rebind('t', '')
-        input_handler.rebind('u', '')
-        input_handler.rebind('v', '')
-        input_handler.rebind('w', '')
-        input_handler.rebind('x', '')
-        input_handler.rebind('y', '')
-        input_handler.rebind('z', '')
-        input_handler.rebind('shift', '')
-        input_handler.rebind(self.w, 'w')
-        input_handler.rebind(self.c, 'c')
-        input_handler.rebind(self.b, 'b')
-        input_handler.rebind(self.a, 'a')
-        input_handler.rebind(self.s, 's')
-        input_handler.rebind(self.d, 'd')
-        input_handler.rebind(self.f, 'f')
-        input_handler.rebind(self.e, 'e')
-        input_handler.rebind(self.g, 'g')
-        input_handler.rebind(self.h, 'h')
-        input_handler.rebind(self.i, 'i')
-        input_handler.rebind(self.j, 'j')
-        input_handler.rebind(self.k, 'k')
-        input_handler.rebind(self.l, 'l')
-        input_handler.rebind(self.m, 'm')
-        input_handler.rebind(self.n, 'n')
-        input_handler.rebind(self.o, 'o')
-        input_handler.rebind(self.p, 'p')
-        input_handler.rebind(self.q, 'q')
-        input_handler.rebind(self.r, 'r')
-        input_handler.rebind(self.s, 's')
-        input_handler.rebind(self.t, 't')
-        input_handler.rebind(self.u, 'u')
-        input_handler.rebind(self.v, 'v')
-        input_handler.rebind(self.w, 'w')
-        input_handler.rebind(self.xb, 'x')
-        input_handler.rebind(self.yb, 'y')
-        input_handler.rebind(self.zb, 'z')
-        input_handler.rebind(self.shift, 'shift')
-
 
     def UseMana(self, amount):
         if amount>self.ManaPoints:
@@ -173,6 +116,23 @@ class Player(Entity):
 
         self.SpellEquiped.text = f'Current spell: {self.CurrentEquiped}'
 
+
+class FallingText(Text):
+    def __init__(self,position,text='Default Text'):
+        super().__init__(ignore=False,text=text,scale=1,position=position)
+        self.speed = Vec3(0, 2, 0)
+        self.gravity = Vec3(0, -4.81, 0)
+        self.max_swerve_speed = 1.0
+        self.swerve_speed = random.uniform(-self.max_swerve_speed, self.max_swerve_speed)
+        
+    def update(self):
+        self.speed += self.gravity * time.dt
+        self.position += self.speed * time.dt
+        self.position += Vec3(self.swerve_speed * time.dt, 0, 0)
+        if self.y <= -9:
+            destroy(self)
+
+
 class TimeStop():
     def __init__(self):
         self.TimestopAudio=Audio('assets/audio/spells/TimeStop/timestop.ogg',autoplay=False,loop=False,volume=1)
@@ -198,7 +158,9 @@ class TimeStop():
                     pass
                 self.pauseTime()
             elif not EnoughMana:
-                pass
+                FallingText(text='Not enough mana!',position=(0,0,0))
+        else:
+            FallingText(text='Spell cooling down!',position=(0,0,0))
 
     def pauseTime(self):
         self.enemyTimestopped = True
@@ -219,7 +181,7 @@ class Firewave(Entity):
         self.FireballAudio = Audio('assets/audio/spells/FireShot.ogg')
         self.canRun =  True
         self.Activated = False
-        self.canRunAgain=Sequence(Wait(12),Func(setattr, self, 'canRun', True),auto_destroy=False)
+        self.canRunAgain=Sequence(Wait(1),Func(setattr, self, 'canRun', True),auto_destroy=False)
         self.baseDamageAmount = 12
         self.damageMultipler = 1
         
@@ -233,8 +195,10 @@ class Firewave(Entity):
                     pass
                 self.shootFirewave()
             elif not EnoughMana:
-                pass
-            
+                FallingText(text='Not enough mana!',position=(0,0,0))
+        else:
+            FallingText(text='Spell cooling down!',position=(0,0,0))
+                  
     def shootFirewave(self):
         damageAmount = self.baseDamageAmount * self.damageMultipler
         for enemy in enemyList:
@@ -247,7 +211,7 @@ class Firewave(Entity):
    
     def update(self):
         pass#if self.Activated:
-                        
+
     
 class EnemyNormal(Entity):
     def __init__(self, add_to_scene_entities=True, **kwargs):
