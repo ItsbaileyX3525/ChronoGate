@@ -1,8 +1,10 @@
 from ursina import *
+from ursina.prefabs.health_bar import HealthBar
 import threading
 import json
 from pathlib import Path
 import glob
+import random
 main_directory = Path(__file__).resolve().parent
 
 
@@ -110,11 +112,15 @@ class FirstPersonController(Entity):
         self.cursor.enabled = False
 
 class Player(Entity):
-    def __init__(self, **kwargs):
+    def __init__(self,playerName=None, **kwargs):
         super().__init__(**kwargs)
         #General player stuff
+        self.playerName = playerName
+
         self.HitPoints = 100
+        self.MaxHitPoints = 100
         self.ManaPoints = 20
+        self.MaxManaPoints = 50
         self.Level = 1
         self.Experience = 0
         self.ExperienceNeeded = 100
@@ -125,15 +131,31 @@ class Player(Entity):
         self.bobbing_timer = 0.0
         
         #Spells & stuff
-        self.CurrentEquiped = 'TimeStop'
+        self.CurrentEquiped = 'None'
         self.SpellEquiped = Text(text='Current spell: None',x=-.87,y=-.45)
         self.Spells = ['TimeStop', 'FireWave', ]
         self.Timestop = TimeStop()
-        #self.Firewave = Firewave()
+        #self.Firewave = Firewave() - Being made still
         
         #Audios for the player
         self.normalFootSteps=Audio('assets/audio/player/footslow.ogg',autoplay=False,loop=False,volume=.5)
         self.sprintFootSteps=Audio('assets/audio/player/footfast.ogg',autoplay=False,loop=False,volume=.5)
+
+        if self.playerName is None:
+            self.names=["Thistlethorn","Moonshadow","Fernbloom","Wildroot","Oakleaf","Stormcaller", "Sunflower","Rivermist","Forestsong"]
+            self.playerName = random.choice(self.names)
+
+        #Ui stuff
+        UI=camera.ui
+        self.backgroundHolder=Entity(parent=UI,model='quad',color=color.gray,scale=(.65,.15),x=-.45,y=.4)
+        self.Name = Text(text=self.playerName,y=.46,x=-.46)
+        if len(self.playerName) >= 7:
+            self.Name.x=-.47
+        self.profile=Entity(parent=UI,model='quad',texture='assets/textures/misc/Placeholder.png',scale=.15,y=.4,x=-.75)
+        self.HealthBar = HealthBar(parent=UI,bar_color=rgb(77,255,77),x=-.65,y=.42, roundness=.5,scale=(.5,.025),max_value=self.MaxHitPoints)
+        self.HealthBar.value=self.HitPoints;self.HealthBar.animation_duration=0
+        self.ManaBar = HealthBar(parent=UI,bar_color=rgb(0,128,255),x=-.65,y=.38, roundness=.5,scale=(.5,.025),max_value=self.MaxManaPoints)
+        self.ManaBar.value=self.ManaPoints;self.ManaBar.animation_duration=0
 
         #keybinds
         file_pattern = str(main_directory / 'assets/data/controls.json')
@@ -203,6 +225,10 @@ class Player(Entity):
             camera.y = 0.0
 
         self.SpellEquiped.text = f'Current spell: {self.CurrentEquiped}'
+        self.ManaBar.value=self.ManaPoints
+        self.ManaBar.max_value=self.MaxManaPoints
+        self.HealthBar.value=self.HitPoints
+        self.HealthBar.max_value=self.MaxHitPoints
 
 class TimeStop(Entity):
     def __init__(self, add_to_scene_entities=True, **kwargs):
@@ -625,6 +651,12 @@ class MenuScreen(Entity):
         self.quitGameBTN.on_click=self.quit_
 
         #After button clicked stuff
+        self.nameMakerText=Text(text='Enter your character name...',x=-.15,y=.1,enabled=False)
+        self.nameMaker = InputField(character_limit=12,color=color.white,text_color=color.black,limit_content_to = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ',scale_x=.25,scale_y=.05,enabled=False)
+        self.nameMaker.highlight_color=color.white
+        self.nameMakerConfirm = Button(text='Confirm',radius=.3,scale=(0.2,0.065),color=color.white,text_color=color.black,highlight_color=color.white,highlight_scale=1.2,pressed_scale=1.07,enabled=False,pressed_color=self.btnHcolor,x=.25,z=-500)
+        self.nameMakerConfirm.on_click = self.startGame2
+        
         self.volume_slider = Slider(step=1,parent=self.UI,min=0, max=100, default=100, dynamic=True,position=(-24,.3),text='Master volume:',on_value_changed = self.set_volume)
         self.volume_slider.add_script(SmoothFollow(target=self.volume_sliderP,speed=6))
 
@@ -738,8 +770,7 @@ class MenuScreen(Entity):
     def ShowSkipButton(self):
         self.canSkip=True
         self.canSkipText.visible=True
-        self.s3=Sequence(1, Func(self.canSkipText.blink, duration=1),loop=True)
-        self.s3.start()
+        self.s3=Sequence(1, Func(self.canSkipText.blink, duration=1),loop=True).start()
 
     def FadeToBlack(self):
         self.texture = None
@@ -750,12 +781,20 @@ class MenuScreen(Entity):
         invoke(self.startGame,delay=2)
 
     def startGame(self):
+        self.nameMaker.enabled=True
+        self.nameMakerText.enabled=True
+        self.nameMakerConfirm.enabled=True
+
+    def startGame2(self):
         global GROUND,player,playerController,enemyOne,PauseScreen,playerControllerWalkW,playerControllerWalkS,playerControllerWalkA,playerControllerWalkD
+        self.nameMaker.enabled=False
+        self.nameMakerText.enabled=False
+        self.nameMakerConfirm.enabled=False        
         self.blackScreen.fade_out(duration=.8)
         destroy(self.WormholeTravel)
         destroy(self)
         self.s4.pause()
-        player=Player()
+        player=Player(playerName=self.nameMaker.text)
         file_pattern = str(main_directory / 'assets/data/controls.json')
         files = glob.glob(file_pattern)
         if files:
