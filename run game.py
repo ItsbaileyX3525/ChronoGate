@@ -140,7 +140,6 @@ class Player(Entity):
         files = glob.glob(file_pattern)
         if files:
             file_path = files[0]
-            print(file_path)
         with open(file_path) as file:
             self.data = json.load(file)
 
@@ -211,9 +210,9 @@ class TimeStop(Entity):
         self.ClockTickingAudio=Audio('assets/audio/spells/TimeStop/ClockTicking.ogg',autoplay=False,loop=False,volume=1)
         self.TimeresumeAudio=Audio('assets/audio/spells/TimeStop/timeresume.ogg',autoplay=False,loop=False,volume=1)
         self.canRun = True
-        self.resume=Sequence(Wait(7),Func(self.resumeTime),auto_destroy=False)
-        self.ticking=Sequence(Wait(2),Func(self.ClockTickingAudio.play),auto_destroy=False)
-        self.canRunAgain=Sequence(Wait(50),Func(setattr, self, 'canRun', True),auto_destroy=False)
+        self.resume=Sequence(Wait(7),Func(self.resumeTime),auto_destroy=False,autoplay=False)
+        self.ticking=Sequence(Wait(2),Func(self.ClockTickingAudio.play),auto_destroy=False,autoplay=False)
+        self.canRunAgain=Sequence(Wait(50),Func(setattr, self, 'canRun', True),auto_destroy=False,autoplay=False)
         self.loadanims=threading.Thread(target=self.loadAnims).start()
 
     def loadAnims(self):
@@ -222,14 +221,12 @@ class TimeStop(Entity):
     def Activate(self):
         if self.canRun:
             EnoughMana=player.UseMana(amount=10)
-            print("used mana")
             if EnoughMana:
                 if not self.TimestopAudio.playing:
                     self.TimestopAudio.play()
                 else:
                     pass
                 self.pauseTime()
-                print(f"Remaining mana: {player.ManaPoints}")
             elif not EnoughMana:
                 pass
 
@@ -340,7 +337,7 @@ class MenuScreenDeath(Entity):
         self.quitGameBTN.on_click=self.quit_
 
         #After button clicked stuff
-        self.volume_slider = Slider(step=1,parent=self.UI,min=0, max=100, default=100, dynamic=True,position=(-24,.3),text='Master volume:',on_value_changed = self.set_volume)
+        self.volume_slider = Slider(step=1,parent=self.UI,min=0, max=100, default=100, dynamic=True,position=(24,.3),text='Master volume:',on_value_changed = self.set_volume)
         self.volume_slider.add_script(SmoothFollow(target=self.volume_sliderP,speed=6))
 
         self.sensDecrease = Button(text='e',radius=.3,parent=self.UI,color=self.btnColor,scale=(.05,.05),highlight_color=self.btnHcolor,highlight_scale=1.2,pressed_scale=1.07,pressed_color=self.btnHcolor,y= 0)
@@ -625,7 +622,7 @@ class MenuScreen(Entity):
         self.quitGameBTN.on_click=self.quit_
 
         #After button clicked stuff
-        self.volume_slider = Slider(step=1,parent=self.UI,min=0, max=100, default=100, dynamic=True,position=(-24,.3),text='Master volume:',on_value_changed = self.set_volume)
+        self.volume_slider = Slider(visible=False,step=1,parent=self.UI,min=0, max=100, default=100, dynamic=True,position=(24,.3),text='Master volume:',on_value_changed = self.set_volume)
         self.volume_slider.add_script(SmoothFollow(target=self.volume_sliderP,speed=6))
 
         self.sensDecrease = Button(text='e',radius=.3,parent=self.UI,color=self.btnColor,scale=(.05,.05),highlight_color=self.btnHcolor,highlight_scale=1.2,pressed_scale=1.07,pressed_color=self.btnHcolor,y= 0)
@@ -760,7 +757,6 @@ class MenuScreen(Entity):
         files = glob.glob(file_pattern)
         if files:
             file_path = files[0]
-            print(file_path)
         with open(file_path) as file:
             self.data = json.load(file)
         with open(file_path) as file:
@@ -794,6 +790,7 @@ class MenuScreen(Entity):
             self.sensTextP.position = (0.02,.02)
             self.sensTitleP.position = (0.05,.1)
             self.keybindsP.position = (.125,-0.2)
+            self.volume_slider.visible=True
 
             self.shopGameBTN.scale = (0.2,0.075)
             self.shopGameBTN.color = self.btnColor
@@ -832,6 +829,7 @@ class MenuScreen(Entity):
             self.sensTextP.position = (0.02,.02)
             self.sensTitleP.position = (0.05,.1)
             self.keybindsP.position = (.125,-0.2)
+            self.volume_slider.visible=True
             
             self.shopGameBTN.scale = (0.2,0.075)
             self.shopGameBTN.color = self.btnColor
@@ -932,7 +930,7 @@ class Keybinds(Entity):
         super().__init__(add_to_scene_entities, **kwargs)
         self.parent=camera.ui
         self.model='quad'
-        self.color=color.gray
+        self.texture='assets/textures/menu/keybindsBG.png'
         self.scale_x=2
         self.z=-199
         self.ignore_paused=True
@@ -940,7 +938,6 @@ class Keybinds(Entity):
         files = glob.glob(file_pattern)
         if files:
             file_path = files[0]
-            print(file_path)
         with open(file_path) as file:
             self.data = json.load(file)
         with open(file_path) as file:
@@ -999,7 +996,7 @@ class Keybinds(Entity):
                 self.ButtonD.text = f'>  {self.data["D"]}  <'
                 self.ButtonDSeq.start()
             case _:
-                print("None")
+                pass
 
     def LeaveKeybinds(self):
         for e in self.egg.Entities:
@@ -1072,10 +1069,7 @@ class Keybinds(Entity):
         file_pattern = str(main_directory / 'assets/data/controls.json')
         files = glob.glob(file_pattern)
         if files:
-            file_path = files[0]
-            print(file_path)
-        with open(file_path) as file:
-            self.data = json.load(file)
+            file_path = files[0]    
         with open(file_path, 'w') as file:
             json.dump(self.data, file,indent=4)
 
@@ -1136,7 +1130,7 @@ class PauseMenuScreen(Entity):
         
         self.UI = Entity(parent=camera.ui)
         
-        self.volume_slider = Slider(step=1,parent=self.UI,min=0, max=100, default=int(app.sfxManagerList[0].getVolume()*100), dynamic=True,position=(0,.3),text='Master volume:',on_value_changed = self.set_volume)
+        self.volume_slider = Slider(visible=False,step=1,parent=self.UI,min=0, max=100, default=int(app.sfxManagerList[0].getVolume()*100), dynamic=True,position=(0,.3),text='Master volume:',on_value_changed = self.set_volume)
         self.volume_slider.ignore_paused=True;self.volume_slider.knob.ignore_paused=True;self.volume_slider.label.ignore_paused=True
 
         self.sensDecrease = Button(text='e',radius=.3,x=-.1,parent=self.UI,color=self.btnColor,scale=(.05,.05),highlight_color=self.btnHcolor,highlight_scale=1.2,pressed_scale=1.07,pressed_color=self.btnHcolor)
@@ -1162,7 +1156,7 @@ class PauseMenuScreen(Entity):
     def CloseGame(self):
         Background = Entity(parent=camera.ui,model='quad', color=color.gray,scale=(.8,.4),z=-10)
         AreYouSure = Text(parent=camera.ui,text='Are you sure?',x=-.05,y=.15,z=-20)
-        Yes = Button(text='yes',scale_x=.2,scale_y=.1,x=-.15,on_click=Func(application.quit),color=self.btnColor,highlight_color=self.btnHcolor,highlight_scale=1.2,pressed_scale=1.07,pressed_color=self.btnHcolor,z=-20)
+        Yes = Button(ignore_paused=True,text='yes',scale_x=.2,scale_y=.1,x=-.15,on_click=Func(application.quit),color=self.btnColor,highlight_color=self.btnHcolor,highlight_scale=1.2,pressed_scale=1.07,pressed_color=self.btnHcolor,z=-20)
         No = Button(text='No',scale_x=.2,scale_y=.1,x=.15,color=self.btnColor,highlight_color=self.btnHcolor,highlight_scale=1.2,pressed_scale=1.07,pressed_color=self.btnHcolor,z=-20)
         def ClosePromt():
             destroy(No)

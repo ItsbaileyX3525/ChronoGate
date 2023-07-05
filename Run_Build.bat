@@ -1,1 +1,1 @@
-python -m ursina.build --include-modules "json", "threading", "pathlib", "glob"
+python -m ursina.build --include-modules "json", "threading", "pathlib", "glob", "random"
