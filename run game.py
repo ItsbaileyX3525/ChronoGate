@@ -7,7 +7,10 @@ import glob
 import random
 main_directory = Path(__file__).resolve().parent
 
-
+file_pattern = str(main_directory / 'assets/data/controls.json')
+files = glob.glob(file_pattern)
+if files:
+    file_path = files[0]
 class FirstPersonController(Entity):
     def __init__(self, **kwargs):
         self.cursor = Entity(parent=camera.ui, model='quad', color=color.pink, scale=.008, rotation_z=45)
@@ -141,7 +144,7 @@ class Player(Entity):
         self.normalFootSteps=Audio('assets/audio/player/footslow.ogg',autoplay=False,loop=False,volume=.5)
         self.sprintFootSteps=Audio('assets/audio/player/footfast.ogg',autoplay=False,loop=False,volume=.5)
 
-        if self.playerName is None:
+        if self.playerName is None or len(self.playerName) == 0:
             self.names=["Thistlethorn","Moonshadow","Fernbloom","Wildroot","Oakleaf","Stormcaller", "Sunflower","Rivermist","Forestsong"]
             self.playerName = random.choice(self.names)
 
@@ -158,10 +161,6 @@ class Player(Entity):
         self.ManaBar.value=self.ManaPoints;self.ManaBar.animation_duration=0
 
         #keybinds
-        file_pattern = str(main_directory / 'assets/data/controls.json')
-        files = glob.glob(file_pattern)
-        if files:
-            file_path = files[0]
         with open(file_path) as file:
             self.data = json.load(file)
 
@@ -169,6 +168,7 @@ class Player(Entity):
         self.strafeLeft = playerControllerWalkA
         self.walkBackward = playerControllerWalkS
         self.strafeRight = playerControllerWalkD
+        self.interact = playerControllerInteract
         self.sprint = self.data['Shift']
 
 
@@ -193,7 +193,7 @@ class Player(Entity):
         self.ExperienceNeeded *= 2
 
     def input(self, key):
-        if key=='e' and not application.paused:
+        if key==player.interact and not application.paused:
             self.UseMagic()
 
     def update(self):
@@ -274,6 +274,7 @@ class EnemyNormal(Entity):
         super().__init__(add_to_scene_entities, **kwargs)
         self.model = 'cube'
         self.color = color.red
+        self.collider='box'
         self.inRange = False
         self.inRangeAttack = False
         self.touchingBorder = False
@@ -756,13 +757,9 @@ class MenuScreen(Entity):
             destroy(e)
         self.startAudio.play()
         self.WormholeTravel.visible = True
-        self.s = Sequence(Wait(1),Func(self.introAudio.play))
-        self.s1 = Sequence(Wait(3),Func(self.ShowSkipButton))
-        self.s4 = Sequence(Wait(43),Func(self.FadeToBlack))
-        self.s.start()
-        self.s1.start()
-        self.s4.start()
-
+        self.s = Sequence(Wait(1),Func(self.introAudio.play)).start()
+        self.s1 = Sequence(Wait(3),Func(self.ShowSkipButton)).start()
+        self.s4 = Sequence(Wait(43),Func(self.FadeToBlack)).start()
 
     def ShowSkipButton(self):
         self.canSkip=True
@@ -783,7 +780,7 @@ class MenuScreen(Entity):
         self.nameMakerConfirm.enabled=True
 
     def startGame2(self):
-        global GROUND,player,playerController,enemyOne,PauseScreen,playerControllerWalkW,playerControllerWalkS,playerControllerWalkA,playerControllerWalkD
+        global GROUND,player,playerController,enemyOne,PauseScreen,playerControllerWalkW,playerControllerWalkS,playerControllerWalkA,playerControllerWalkD,playerControllerInteract
         self.nameMaker.enabled=False
         self.nameMakerText.enabled=False
         self.nameMakerConfirm.enabled=False        
@@ -792,22 +789,17 @@ class MenuScreen(Entity):
         destroy(self)
         self.s4.pause()
         player=Player(playerName=self.nameMaker.text)
-        file_pattern = str(main_directory / 'assets/data/controls.json')
-        files = glob.glob(file_pattern)
-        if files:
-            file_path = files[0]
-        with open(file_path) as file:
-            self.data = json.load(file)
         with open(file_path) as file:
             self.data = json.load(file)
         playerControllerWalkW = self.data['W']
         playerControllerWalkS = self.data['S']
         playerControllerWalkA = self.data['A']
         playerControllerWalkD = self.data['D']
-        playerController=FirstPersonController()
+        playerControllerInteract = self.data['E']
+        GROUND=Entity(model='plane',scale=1000,texture='grass',texture_scale=(32,32),collider='box')
+        playerController=FirstPersonController(y=2)
         playerController.mouse_sensitivity = PlayerSensitvity
         enemyOne = EnemyNormal(x=20)
-        GROUND=Entity(model='plane',scale=1000,texture='grass',texture_scale=(32,32),collider='box')
         PauseScreen = None
 
     def opt(self):
@@ -973,12 +965,6 @@ class Keybinds(Entity):
         self.scale_x=2
         self.z=-199
         self.ignore_paused=True
-        file_pattern = str(main_directory / 'assets/data/controls.json')
-        files = glob.glob(file_pattern)
-        if files:
-            file_path = files[0]
-        with open(file_path) as file:
-            self.data = json.load(file)
         with open(file_path) as file:
             self.data = json.load(file)
 
@@ -992,29 +978,31 @@ class Keybinds(Entity):
         self.changeA = False
         self.changeS = False
         self.changeD = False
-        self.w = self.data['W']
-        self.a = self.data['A']
-        self.s = self.data['S']
-        self.d = self.data['D']
-        self.ButtonW = Button(radius=.2,text=self.w,scale=(.15,.07),x=.4,y=.4,on_click = Func(self.ChangeLetter, 'w'),z=-200)
+        self.changeE = False
+        self.ButtonW = Button(radius=.2,text=self.data['W'],scale=(.15,.07),x=.4,y=.4,on_click = Func(self.ChangeLetter, 'w'),z=-200)
         self.ButtonWText = Text(text='Walk Forward',y=.4,x=-.2,z=-200)
         self.ButtonW.text_entity.use_tags=False
-        self.ButtonA = Button(radius=.2,text=self.a,scale=(.15,.07),x=.4,y=.3,on_click = Func(self.ChangeLetter, 'a'),z=-200)
+        self.ButtonA = Button(radius=.2,text=self.data['A'],scale=(.15,.07),x=.4,y=.3,on_click = Func(self.ChangeLetter, 'a'),z=-200)
         self.ButtonAText = Text(text='Strafe Left',y=.3,x=-.2,z=-200)
         self.ButtonA.text_entity.use_tags=False
-        self.ButtonS = Button(radius=.2,text=self.s,scale=(.15,.07),x=.4,y=.2,on_click = Func(self.ChangeLetter, 's'),z=-200)
+        self.ButtonS = Button(radius=.2,text=self.data['S'],scale=(.15,.07),x=.4,y=.2,on_click = Func(self.ChangeLetter, 's'),z=-200)
         self.ButtonSText = Text(text='Walk Backwards',y=.2,x=-.2,z=-200)
         self.ButtonS.text_entity.use_tags=False
-        self.ButtonD = Button(radius=.2,text=self.d,scale=(.15,.07),x=.4,y=.1,on_click = Func(self.ChangeLetter, 'd'),z=-200)
+        self.ButtonD = Button(radius=.2,text=self.data['D'],scale=(.15,.07),x=.4,y=.1,on_click = Func(self.ChangeLetter, 'd'),z=-200)
         self.ButtonDText = Text(text='Strafe Right',y=.1,x=-.2,z=-200)
         self.ButtonD.text_entity.use_tags=False
+        self.ButtonE = Button(radius=.2,text=self.data['E'],scale=(.15,.07),x=.4,y=0,on_click = Func(self.ChangeLetter, 'e'),z=-200)
+        self.ButtonEText = Text(text='Use magic',y=0,x=-.2,z=-200)
+        self.ButtonE.text_entity.use_tags=False
         self.ButtonWSeq = Sequence(Wait(.25),Func(setattr, self.ButtonW, "text", f"> {self.data['W']} <"), Wait(.25),Func(setattr, self.ButtonW, "text", f">  {self.data['W']}  <"),Wait(.25), Func(setattr, self.ButtonW, "text", f">   {self.data['W']}   <"),Wait(.25), Func(setattr, self.ButtonW, "text", f">  {self.data['W']}  <"),loop=True)
         self.ButtonASeq = Sequence(Wait(.25),Func(setattr, self.ButtonA, "text", f"> {self.data['A']} <"), Wait(.25),Func(setattr, self.ButtonA, "text", f">  {self.data['A']}  <"),Wait(.25), Func(setattr, self.ButtonA, "text", f">   {self.data['A']}   <"),Wait(.25), Func(setattr, self.ButtonA, "text", f">  {self.data['A']}  <"),loop=True)
         self.ButtonSSeq = Sequence(Wait(.25),Func(setattr, self.ButtonS, "text", f"> {self.data['S']} <"), Wait(.25),Func(setattr, self.ButtonS, "text", f">  {self.data['S']}  <"),Wait(.25), Func(setattr, self.ButtonS, "text", f">   {self.data['S']}   <"),Wait(.25), Func(setattr, self.ButtonS, "text", f">  {self.data['S']}  <"),loop=True)
         self.ButtonDSeq = Sequence(Wait(.25),Func(setattr, self.ButtonD, "text", f"> {self.data['D']} <"), Wait(.25),Func(setattr, self.ButtonD, "text", f">  {self.data['D']}  <"),Wait(.25), Func(setattr, self.ButtonD, "text", f">   {self.data['D']}   <"),Wait(.25), Func(setattr, self.ButtonD, "text", f">  {self.data['D']}  <"),loop=True)
+        self.ButtonESeq = Sequence(Wait(.25),Func(setattr, self.ButtonE, "text", f"> {self.data['E']} <"), Wait(.25),Func(setattr, self.ButtonE, "text", f">  {self.data['E']}  <"),Wait(.25), Func(setattr, self.ButtonE, "text", f">   {self.data['E']}   <"),Wait(.25), Func(setattr, self.ButtonE, "text", f">  {self.data['E']}  <"),loop=True)
 
         self.ButtonLeave = Button(radius=.2,text='Exit',scale=(.15,.07),y=-.4,on_click = self.LeaveKeybinds,z=-200)
-        self.Entities=[self.ButtonLeave,self.ButtonA,self.ButtonW,self.ButtonS,self.ButtonD,self.ButtonAText,self.ButtonWText,self.ButtonSText,self.ButtonDText]
+        self.Entities=[self.ButtonLeave,self.ButtonA,self.ButtonW,self.ButtonS,self.ButtonD,self.ButtonAText,self.ButtonWText,self.ButtonSText,self.ButtonDText,self.ButtonESeq,self.ButtonDSeq,
+        self.ButtonWSeq,self.ButtonASeq,self.ButtonSSeq,self.ButtonE,self.ButtonEText]
 
     def ChangeLetter(self, arg):
         match arg:
@@ -1034,6 +1022,10 @@ class Keybinds(Entity):
                 self.changeD = True
                 self.ButtonD.text = f'>  {self.data["D"]}  <'
                 self.ButtonDSeq.start()
+            case 'e':
+                self.changeE = True
+                self.ButtonE.text = f'>  {self.data["E"]}  <'
+                self.ButtonESeq.start()
             case _:
                 pass
 
@@ -1041,7 +1033,10 @@ class Keybinds(Entity):
         for e in self.egg.Entities:
             e.enabled=True
         for e in self.Entities:
-            destroy(e)
+            try:
+                destroy(e)
+            except AttributeError:
+                e.kill()
         destroy(self)
 
     def input(self, key):
@@ -1052,11 +1047,13 @@ class Keybinds(Entity):
                 self.ButtonW.text = key
                 self.data['W'] = self.ButtonW.text
                 self.ButtonWSeq = Sequence(Wait(.25),Func(setattr, self.ButtonW, "text", f"> {self.data['W']} <"), Wait(.25),Func(setattr, self.ButtonW, "text", f">  {self.data['W']}  <"),Wait(.25), Func(setattr, self.ButtonW, "text", f">   {self.data['W']}   <"),Wait(.25), Func(setattr, self.ButtonW, "text", f">  {self.data['W']}  <"),loop=True)
+                self.Entities.append(self.ButtonWSeq)
             elif key in self.execpt:
                 self.changeW = False
                 self.ButtonWSeq.kill()
                 self.ButtonW.text = self.data['W']
                 self.ButtonWSeq = Sequence(Wait(.25),Func(setattr, self.ButtonW, "text", f"> {self.data['W']} <"), Wait(.25),Func(setattr, self.ButtonW, "text", f">  {self.data['W']}  <"),Wait(.25), Func(setattr, self.ButtonW, "text", f">   {self.data['W']}   <"),Wait(.25), Func(setattr, self.ButtonW, "text", f">  {self.data['W']}  <"),loop=True)
+                self.Entities.append(self.ButtonWSeq)
         if self.changeA:
             if key not in self.key_exceptions and key:
                 self.ButtonASeq.kill()
@@ -1064,11 +1061,13 @@ class Keybinds(Entity):
                 self.ButtonA.text = key
                 self.data['A'] = self.ButtonA.text
                 self.ButtonASeq = Sequence(Wait(.25),Func(setattr, self.ButtonA, "text", f"> {self.data['A']} <"), Wait(.25),Func(setattr, self.ButtonA, "text", f">  {self.data['A']}  <"),Wait(.25), Func(setattr, self.ButtonA, "text", f">   {self.data['A']}   <"),Wait(.25), Func(setattr, self.ButtonA, "text", f">  {self.data['A']}  <"),loop=True)
+                self.Entities.append(self.ButtonASeq)
             elif key in self.execpt:
                 self.changeA = False
                 self.ButtonASeq.kill()
                 self.ButtonA.text = self.data['A']
                 self.ButtonASeq = Sequence(Wait(.25),Func(setattr, self.ButtonA, "text", f"> {self.data['A']} <"), Wait(.25),Func(setattr, self.ButtonA, "text", f">  {self.data['A']}  <"),Wait(.25), Func(setattr, self.ButtonA, "text", f">   {self.data['A']}   <"),Wait(.25), Func(setattr, self.ButtonA, "text", f">  {self.data['A']}  <"),loop=True)
+                self.Entities.append(self.ButtonASeq)
         if self.changeS:
             if key not in self.key_exceptions and key:
                 self.ButtonSSeq.kill()
@@ -1076,11 +1075,13 @@ class Keybinds(Entity):
                 self.ButtonS.text = key
                 self.data['S'] = self.ButtonS.text
                 self.ButtonSSeq = Sequence(Wait(.25),Func(setattr, self.ButtonS, "text", f"> {self.data['S']} <"), Wait(.25),Func(setattr, self.ButtonS, "text", f">  {self.data['S']}  <"),Wait(.25), Func(setattr, self.ButtonS, "text", f">   {self.data['S']}   <"),Wait(.25), Func(setattr, self.ButtonS, "text", f">  {self.data['S']}  <"),loop=True)
+                self.Entities.append(self.ButtonSSeq)
             elif key in self.execpt:
                 self.changeS = False
                 self.ButtonSSeq.kill()
                 self.ButtonS.text = self.data['S']
                 self.ButtonSSeq = Sequence(Wait(.25),Func(setattr, self.ButtonS, "text", f"> {self.data['S']} <"), Wait(.25),Func(setattr, self.ButtonS, "text", f">  {self.data['S']}  <"),Wait(.25), Func(setattr, self.ButtonS, "text", f">   {self.data['S']}   <"),Wait(.25), Func(setattr, self.ButtonS, "text", f">  {self.data['S']}  <"),loop=True)
+                self.Entities.append(self.ButtonSSeq)
         if self.changeD:
             if key not in self.key_exceptions and key:
                 self.ButtonDSeq.kill()
@@ -1088,27 +1089,42 @@ class Keybinds(Entity):
                 self.ButtonD.text = key
                 self.data['D'] = self.ButtonD.text
                 self.ButtonDSeq = Sequence(Wait(.25),Func(setattr, self.ButtonD, "text", f"> {self.data['D']} <"), Wait(.25),Func(setattr, self.ButtonD, "text", f">  {self.data['D']}  <"),Wait(.25), Func(setattr, self.ButtonD, "text", f">   {self.data['D']}   <"),Wait(.25), Func(setattr, self.ButtonD, "text", f">  {self.data['D']}  <"),loop=True)
+                self.Entities.append(self.ButtonADeq)
             elif key in self.execpt:
                 self.changeD = False
                 self.ButtonDSeq.kill()
                 self.ButtonD.text = self.data['D']
                 self.ButtonDSeq = Sequence(Wait(.25),Func(setattr, self.ButtonD, "text", f"> {self.data['D']} <"), Wait(.25),Func(setattr, self.ButtonD, "text", f">  {self.data['D']}  <"),Wait(.25), Func(setattr, self.ButtonD, "text", f">   {self.data['D']}   <"),Wait(.25), Func(setattr, self.ButtonD, "text", f">  {self.data['D']}  <"),loop=True)
-        global playerControllerWalkW,playerControllerWalkS,playerControllerWalkA,playerControllerWalkD
+                self.Entities.append(self.ButtonDSeq)
+        if self.changeE:
+            if key not in self.key_exceptions and key:
+                self.ButtonESeq.kill()
+                self.changeE = False
+                self.ButtonE.text = key
+                self.data['E'] = self.ButtonE.text
+                self.ButtonESeq = Sequence(Wait(.25),Func(setattr, self.ButtonE, "text", f"> {self.data['E']} <"), Wait(.25),Func(setattr, self.ButtonE, "text", f">  {self.data['E']}  <"),Wait(.25), Func(setattr, self.ButtonE, "text", f">   {self.data['E']}   <"),Wait(.25), Func(setattr, self.ButtonE, "text", f">  {self.data['E']}  <"),loop=True)
+                self.Entities.append(self.ButtonESeq)
+            elif key in self.execpt:
+                self.changeE = False
+                self.ButtonESeq.kill()
+                self.ButtonE.text = self.data['E']
+                self.ButtonESeq = Sequence(Wait(.25),Func(setattr, self.ButtonE, "text", f"> {self.data['E']} <"), Wait(.25),Func(setattr, self.ButtonE, "text", f">  {self.data['E']}  <"),Wait(.25), Func(setattr, self.ButtonE, "text", f">   {self.data['E']}   <"),Wait(.25), Func(setattr, self.ButtonE, "text", f">  {self.data['E']}  <"),loop=True)
+                self.Entities.append(self.ButtonESeq)
+
+        global playerControllerWalkW,playerControllerWalkS,playerControllerWalkA,playerControllerWalkD,playerControllerInteract
         playerControllerWalkW = self.ButtonW.text
         playerControllerWalkS = self.ButtonS.text
         playerControllerWalkD = self.ButtonD.text
         playerControllerWalkA = self.ButtonA.text
+        playerControllerInteract = self.ButtonE.text
         try:
             player.walkForward = playerControllerWalkW
             player.walkBackward = playerControllerWalkS
             player.strafeRight = playerControllerWalkA
             player.strafeLeft = playerControllerWalkD
+            player.interact = playerControllerInteract
         except:
-            pass
-        file_pattern = str(main_directory / 'assets/data/controls.json')
-        files = glob.glob(file_pattern)
-        if files:
-            file_path = files[0]    
+            pass   
         with open(file_path, 'w') as file:
             json.dump(self.data, file,indent=4)
 
@@ -1290,6 +1306,7 @@ playerControllerWalkW = 'w'
 playerControllerWalkS = 's'
 playerControllerWalkA = 'a'
 playerControllerWalkD = 'd'
+playerControllerInteract = 'e'
 PlayerSensitvity=(40,40)
 menu=MenuScreen()
 PauseScreen = False
