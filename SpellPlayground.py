@@ -297,7 +297,7 @@ class Firewave(Entity):
         self.FireballAudio = Audio('assets/audio/spells/FireShot.ogg')
         self.canRun =  True
         self.Activated = False
-        self.canRunAgain=Sequence(Wait(1),Func(setattr, self, 'canRun', True),auto_destroy=False)
+        self.canRunAgain=Sequence(Wait(6),Func(setattr, self, 'canRun', True),auto_destroy=False)
         self.baseDamageAmount = 12
         self.damageMultipler = 1
         
@@ -340,6 +340,7 @@ class EnemyNormal(Entity):
         self.touchingBorder = False
         self.y = 2
         self.scale_y=2
+        self.attackSeq = Sequence(Func(self.Attack),Wait(1),loop=True)
         self.shader=lit_with_shadows_shader
 
     def MovementToPlayer(self):
@@ -350,27 +351,34 @@ class EnemyNormal(Entity):
         if 1.5 < self.dist < 18:
             self.inRange = True
             self.inRangeAttack = False
-        elif self.dist < 1.5:
+        elif self.dist <= 1.5:
             self.inRangeAttack = True
             self.inRange = False
         elif self.dist > 18:
             self.inRange = False
             self.inRangeAttack = False
-        if self.inRange and not enemyTimestopped:
+        if self.inRange and not player.Timestop.enemyTimestopped:
             self.look_at_2d(playerController.position, 'y')
             self.MovementToPlayer()
         elif self.inRangeAttack:
-            if not enemyTimestopped:
+            if not player.Timestop.enemyTimestopped:
                 self.look_at_2d(playerController.position, 'y')
-                pass
+                if self.attackSeq.paused:
+                    self.attackSeq.start()
+                    print("Started")
         else:
-            if not self.touchingBorder and not enemyTimestopped:
+            if not self.touchingBorder and not player.Timestop.enemyTimestopped:
                 self.position += self.forward * time.dt * 2
+        if not self.inRangeAttack and not self.attackSeq.paused:
+            self.attackSeq.finish()
 
+    def Attack(self):
+        damage = random.randint(1, 5)
+        player.HitPoints -= damage
 
 window.title = "ChronoGate - Playground"
 
-app=Ursina(borderless=False,vsync=60,development_mode=True,use_ingame_console=True,fullscreen=False)
+app=Ursina(borderless=False,vsync=60,development_mode=True,fullscreen=False)
 PlayerSensitvity=(40,40)
 enemyList=[]
 playerControllerWalkW = 'w'
@@ -381,16 +389,10 @@ playerControllerInteract = 'e'
 GROUND=Entity(model='plane',scale=1000,texture='grass',texture_scale=(32,32),collider='box')
 playerController=FirstPersonController()
 player=Player(y=3)
-enemyTimestopped=False
 playerController.mouse_sensitivity = PlayerSensitvity
 enemyList.append(EnemyNormal(x=20))
 enemyList.append(EnemyNormal(x=40))
 
 Sky(texture='assets/textures/misc/sky.jpg')
 
-def input(key):
-    if held_keys['control'] and key=='h':
-        window.console.text_field.enabled = not window.console.text_field.enabled
-window.console.text_input = "Fuckyoubatman"
-window.console.text_field.enabled = not window.console.text_field.enabled
 app.run()

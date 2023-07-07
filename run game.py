@@ -236,10 +236,12 @@ class TimeStop(Entity):
         self.ClockTickingAudio=Audio('assets/audio/spells/TimeStop/ClockTicking.ogg',autoplay=False,loop=False,volume=1)
         self.TimeresumeAudio=Audio('assets/audio/spells/TimeStop/timeresume.ogg',autoplay=False,loop=False,volume=1)
         self.canRun = True
+        self.enemyTimestopped = False
         self.resume=Sequence(Wait(7),Func(self.resumeTime),auto_destroy=False,autoplay=False)
         self.ticking=Sequence(Wait(2),Func(self.ClockTickingAudio.play),auto_destroy=False,autoplay=False)
         self.canRunAgain=Sequence(Wait(50),Func(setattr, self, 'canRun', True),auto_destroy=False,autoplay=False)
-        self.loadanims=threading.Thread(target=self.loadAnims).start()
+        self.loadanims=threading.Thread(target=self.loadAnims)
+        self.loadanims.start()
 
     def loadAnims(self):
         self.e=Animation(parent=camera.ui,name='assets/textures/spells/time/ts.gif',scale=(2,1),visible=False)
@@ -257,15 +259,13 @@ class TimeStop(Entity):
                 pass
 
     def pauseTime(self):
-        global enemyTimestopped
-        enemyTimestopped = True
+        self.enemyTimestopped = True
         self.canRun = False
         self.resume.start()
         self.ticking.start()
 
     def resumeTime(self):
-        global enemyTimestopped
-        enemyTimestopped = False
+        self.enemyTimestopped = False
         self.TimeresumeAudio.play()
         self.canRunAgain.start()
 
@@ -294,15 +294,15 @@ class EnemyNormal(Entity):
         elif self.dist > 18:
             self.inRange = False
             self.inRangeAttack = False
-        if self.inRange and not enemyTimestopped:
+        if self.inRange and not player.Timestop.enemyTimestopped:
             self.look_at_2d(playerController.position, 'y')
             self.MovementToPlayer()
         elif self.inRangeAttack:
-            if not enemyTimestopped:
+            if not player.Timestop.enemyTimestopped:
                 self.look_at_2d(playerController.position, 'y')
                 pass
         else:
-            if not self.touchingBorder and not enemyTimestopped:
+            if not self.touchingBorder and not player.Timestop.enemyTimestopped:
                 self.position += self.forward * time.dt * 2
 
 class MenuScreenDeath(Entity):
@@ -465,7 +465,7 @@ class MenuScreenDeath(Entity):
             destroy(e)
         destroy(self.parent)
         for e in scene.entities:
-            print(e)
+            print(e)#Debugging
         
     
     def opt(self):
@@ -605,7 +605,7 @@ class MenuScreen(Entity):
         self.timer = 0
         self.canSkip = False
         self.skipTimer = 0
-        self.canSkipText = Text(z=-2,visible=False,text="Hold 'e' to skip.",x=-.88,y=-.46)
+        self.canSkipText = Text(z=-2,visible=False,text=f"Hold '{playerControllerInteract}' to skip.",x=-.88,y=-.46)
         self.mouseSens = 4
 
         self.btnX = 0.2
@@ -757,14 +757,19 @@ class MenuScreen(Entity):
             destroy(e)
         self.startAudio.play()
         self.WormholeTravel.visible = True
-        self.s = Sequence(Wait(1),Func(self.introAudio.play)).start()
-        self.s1 = Sequence(Wait(3),Func(self.ShowSkipButton)).start()
-        self.s4 = Sequence(Wait(43),Func(self.FadeToBlack)).start()
+        self.s = Sequence(Wait(1),Func(self.introAudio.play))
+        self.s1 = Sequence(Wait(3),Func(self.ShowSkipButton))
+        self.s4 = Sequence(Wait(43),Func(self.FadeToBlack))
+        self.s.start()
+        self.s1.start()
+        self.s4.start()
 
     def ShowSkipButton(self):
         self.canSkip=True
         self.canSkipText.visible=True
-        self.s3=Sequence(1, Func(self.canSkipText.blink, duration=1),loop=True).start()
+        self.canSkipText.text=f"Hold '{playerControllerInteract}' to skip."
+        self.s3=Sequence(1, Func(self.canSkipText.blink, duration=1),loop=True)
+        self.s3.start()
 
     def FadeToBlack(self):
         self.texture = None
@@ -925,7 +930,7 @@ class MenuScreen(Entity):
         if self.timer>=0.6:
             application.quit()
         if self.canSkip:
-            if held_keys['e']:
+            if held_keys[playerControllerInteract]:
                 self.skipTimer+=time.dt
                 if self.skipTimer>=1.2:
                     self.canSkip=False
@@ -946,7 +951,8 @@ class DeathScreen(Entity):
         self.texture='assets/textures/menu/YouDied.png'
         self.scale=[16,9]
         self.audio = Audio('assets/audio/player/death.ogg',loop=False,auto_play=True,auto_destroy=True)
-        self.s = Sequence(Wait(4),Func(self.loadMenu)).start()
+        self.s = Sequence(Wait(4),Func(self.loadMenu))
+        self.s.start()
         self.Added=[self.audio,self.s]
         self.entities.extend(self.Added)
 
@@ -1301,12 +1307,13 @@ window.collider_counter.enabled=False
 
 Sky(texture='assets/textures/misc/sky.jpg')
 
-enemyTimestopped = False
-playerControllerWalkW = 'w'
-playerControllerWalkS = 's'
-playerControllerWalkA = 'a'
-playerControllerWalkD = 'd'
-playerControllerInteract = 'e'
+with open(file_path) as file:
+    tempData = json.load(file)
+playerControllerWalkW = tempData['W']
+playerControllerWalkS = tempData['S']
+playerControllerWalkA = tempData['A']
+playerControllerWalkD = tempData['D']
+playerControllerInteract = tempData['E']
 PlayerSensitvity=(40,40)
 menu=MenuScreen()
 PauseScreen = False
