@@ -10,7 +10,7 @@ main_directory = Path(__file__).resolve().parent
 file_pattern = str(main_directory / 'assets/data/controls.json')
 files = glob.glob(file_pattern)
 if files:
-    file_path = files[0]
+    controlsPath = files[0]
 class FirstPersonController(Entity):
     def __init__(self, **kwargs):
         self.cursor = Entity(parent=camera.ui, model='quad', color=color.pink, scale=.008, rotation_z=45)
@@ -161,7 +161,7 @@ class Player(Entity):
         self.ManaBar.value=self.ManaPoints;self.ManaBar.animation_duration=0
 
         #keybinds
-        with open(file_path) as file:
+        with open(controlsPath) as file:
             self.data = json.load(file)
 
         self.walkForward = playerControllerWalkW
@@ -794,7 +794,7 @@ class MenuScreen(Entity):
         destroy(self)
         self.s4.pause()
         player=Player(playerName=self.nameMaker.text)
-        with open(file_path) as file:
+        with open(controlsPath) as file:
             self.data = json.load(file)
         playerControllerWalkW = self.data['W']
         playerControllerWalkS = self.data['S']
@@ -971,7 +971,7 @@ class Keybinds(Entity):
         self.scale_x=2
         self.z=-199
         self.ignore_paused=True
-        with open(file_path) as file:
+        with open(controlsPath) as file:
             self.data = json.load(file)
 
         self.key_exceptions = ['left mouse down', 'left mouse hold', 'left mouse up', 'escape', 'double click', 'right mouse down',
@@ -1131,7 +1131,7 @@ class Keybinds(Entity):
             player.interact = playerControllerInteract
         except:
             pass   
-        with open(file_path, 'w') as file:
+        with open(controlsPath, 'w') as file:
             json.dump(self.data, file,indent=4)
 
 class PauseMenuScreen(Entity):
@@ -1307,7 +1307,7 @@ window.collider_counter.enabled=False
 
 Sky(texture='assets/textures/misc/sky.jpg')
 
-with open(file_path) as file:
+with open(controlsPath) as file:
     tempData = json.load(file)
 playerControllerWalkW = tempData['W']
 playerControllerWalkS = tempData['S']

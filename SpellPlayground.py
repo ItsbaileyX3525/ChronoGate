@@ -1,3 +1,11 @@
+"""
+This py file is used for testing out the spells before they are added to the main game!
+You can still play this as you see fit, to choose a certain spell change player.CurrentEquiped to something in the
+dictionary of player.Spells
+"""
+
+
+
 from ursina import *
 from ursina.prefabs.first_person_controller import *
 from ursina.prefabs.health_bar import HealthBar
@@ -12,7 +20,7 @@ main_directory = Path(__file__).resolve().parent
 file_pattern = str(main_directory / 'assets/data/controls.json')
 files = glob.glob(file_pattern)
 if files:
-    file_path = files[0]
+    controlsPath = files[0]
 class FirstPersonController(Entity):
     def __init__(self, **kwargs):
         self.cursor = Entity(parent=camera.ui, model='quad', color=color.pink, scale=.008, rotation_z=45)
@@ -163,7 +171,7 @@ class Player(Entity):
         self.ManaBar.value=self.ManaPoints;self.ManaBar.animation_duration=0
 
         #keybinds
-        with open(file_path) as file:
+        with open(controlsPath) as file:
             self.data = json.load(file)
 
         self.walkForward = playerControllerWalkW
